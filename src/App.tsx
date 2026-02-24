@@ -17,7 +17,8 @@ export default function HobroScoutingApp() {
     dato: new Date().toISOString().split('T')[0],
     navn: '', klub: '', aargang: '2014', foedt: '', rve: '1', position: '', ben: 'Højre', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
-    pros: '', cons: '', udvikling: '', oplevelse: 'Middel', proces: 'Skal følges'
+    pros: '', cons: '', udvikling: '', oplevelse: 'Middel', proces: 'Skal følges',
+    spillertype: 'Spilfordeler'
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -67,7 +68,8 @@ export default function HobroScoutingApp() {
     }
   };
 
-  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc', boxSizing: 'border-box' };
+  // Sort tekst tilføjet her (color: '#333')
+  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc', boxSizing: 'border-box', color: '#333' };
 
   if (!isLoggedIn) {
     return (
@@ -76,7 +78,7 @@ export default function HobroScoutingApp() {
         <input 
           type="text" 
           placeholder="Password" 
-          style={{...inputStyle, color: 'black'}} 
+          style={inputStyle} 
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && (password === 'HIK1234' ? setIsLoggedIn(true) : alert('Forkert!'))} 
         />
@@ -100,70 +102,26 @@ export default function HobroScoutingApp() {
       {visFormular ? (
         <div style={{padding: '20px', backgroundColor: 'white'}}>
           <h3>{redigeringsId ? 'Rediger Rapport' : 'Stamdata & Tid'}</h3>
-          <label>Dato:</label><input type="date" style={inputStyle} value={formData.dato} onChange={e => setFormData({...formData, dato: e.target.value})} />
+          <label style={{fontSize: '12px', fontWeight: 'bold'}}>DATO</label>
+          <input type="date" style={inputStyle} value={formData.dato} onChange={e => setFormData({...formData, dato: e.target.value})} />
+          
           <input type="text" placeholder="Navn" style={inputStyle} value={formData.navn} onChange={e => setFormData({...formData, navn: e.target.value})} />
           <input type="text" placeholder="Klub" style={inputStyle} value={formData.klub} onChange={e => setFormData({...formData, klub: e.target.value})} />
           <input type="text" placeholder="Født (DD-MM-ÅÅ)" style={inputStyle} value={formData.foedt} onChange={e => setFormData({...formData, foedt: e.target.value})} />
-          <label style={{fontSize: '12px', fontWeight: 'bold'}}>ÅRGANG</label>
-<select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>
-  {['2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
-    <option key={aar} value={aar}>{aar}</option>
-  ))}
-</select>
           
-          <label>RVE (1-3):</label>
-          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
-            <option value="1">1 (Lille)</option><option value="2">2 (Mellem)</option><option value="3">3 (Stor)</option>
-          </select>
-
-          <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
-          <label>Foretrukket ben:</label>
-          <select style={inputStyle} value={formData.ben} onChange={e => setFormData({...formData, ben: e.target.value})}>
-            <option value="Højre">Højre</option><option value="Venstre">Venstre</option><option value="Begge">Begge</option>
-          </select>
-          <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
-
-          <h3>Karakterer (1-6)</h3>
-          {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(felt => (
-            <div key={felt} style={{marginBottom: '5px'}}>
-              <label style={{fontSize: '12px'}}>{felt.toUpperCase()}</label>
-              <select style={inputStyle} value={formData[felt]} onChange={e => setFormData({...formData, [felt]: e.target.value})}>
-                {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
-              </select>
-            </div>
-          ))}
-
-          <h3>Noter & Vurdering</h3>
-          <textarea placeholder="Pros" style={{...inputStyle, height: '60px'}} value={formData.pros} onChange={e => setFormData({...formData, pros: e.target.value})} />
-          <textarea placeholder="Cons" style={{...inputStyle, height: '60px'}} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
-          <textarea placeholder="Udviklingsmuligheder" style={{...inputStyle, height: '60px'}} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
-
-          <button onClick={gemSpiller} style={{width: '100%', padding: '15px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold'}}>
-            {redigeringsId ? 'OPDATER RAPPORT' : 'GEM RAPPORT'}
-          </button>
-          <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '10px', color: 'red', background: 'none', border: 'none'}}>Fortryd</button>
-        </div>
-      ) : (
-        <div style={{padding: '15px'}}>
-          <div style={{display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px'}}>
-          {['Alle', '2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
-              <button key={aar} onClick={() => setValgtAargang(aar)} style={{padding: '8px 15px', borderRadius: '20px', border: 'none', flexShrink: 0, backgroundColor: valgtAargang === aar ? '#0056a4' : 'white', color: valgtAargang === aar ? 'white' : 'black'}}>{aar}</button>
+          <label style={{fontSize: '12px', fontWeight: 'bold'}}>ÅRGANG</label>
+          <select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>
+            {['2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
+              <option key={aar} value={aar}>{aar}</option>
             ))}
-          </div>
-          {spillere.filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang).map(s => (
-            <div key={s.id} onClick={() => aabenRedigering(s)} style={{backgroundColor: 'white', padding: '15px', borderRadius: '10px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '5px solid #fdef42', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>
-              <div>
-                <div style={{fontWeight: 'bold'}}>{s.navn} ({s.aargang})</div>
-                <div style={{fontSize: '11px', color: '#666'}}>{s.klub} • {s.position} • RVE: {s.rve}</div>
-              </div>
-              <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <div style={{backgroundColor: '#0056a4', color: 'white', padding: '10px', borderRadius: '5px', fontWeight: 'bold', minWidth: '35px', textAlign: 'center'}}>{s.samlet_score}</div>
-                <span style={{color: '#0056a4', fontSize: '20px'}}>›</span>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
+          </select>
+
+          <label style={{fontSize: '12px', fontWeight: 'bold'}}>SPILLERTYPE</label>
+          <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>
+            {['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(type => (
+              <option key={type} value={type}>{type}</option>
+            ))}
+          </select>
+          
+          <label style={{fontSize: '12px', fontWeight: 'bold'}}>RVE (1-3)</label>
+          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value
