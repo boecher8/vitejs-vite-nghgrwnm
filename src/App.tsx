@@ -72,23 +72,7 @@ export default function HobroScoutingApp() {
 
   if (!isLoggedIn) {
     return (
-      <div style={{
-        backgroundColor: 
-          Number(s.samlet_score) > 4.49 ? '#2e7d32' : // Mørkegrøn
-          Number(s.samlet_score) > 3.49 ? '#66bb6a' : // Lysegrøn
-          Number(s.samlet_score) > 2.99 ? '#c8e6c9' : // Svag grøn
-          Number(s.samlet_score) > 2.49 ? '#ffa726' : // Orange
-          '#ef5350', // Rød
-        color: Number(s.samlet_score) > 2.99 && Number(s.samlet_score) < 3.5 ? '#333' : 'white', // Sort tekst i den meget svage grønne for læsbarhed
-        padding: '10px', 
-        borderRadius: '5px', 
-        fontWeight: 'bold', 
-        minWidth: '40px', 
-        textAlign: 'center',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-      }}>
-        {s.samlet_score}
-      </div>
+      <div style={{backgroundColor: '#0056a4', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'sans-serif', padding: '20px'}}>
         <h1 style={{marginBottom: '20px', letterSpacing: '2px', textAlign: 'center'}}>HOBRO IK SCOUTING</h1>
         <input 
           type="text" 
@@ -193,7 +177,22 @@ export default function HobroScoutingApp() {
                 </div>
               </div>
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
-                <div style={{backgroundColor: '#0056a4', color: 'white', padding: '10px', borderRadius: '5px', fontWeight: 'bold', minWidth: '35px', textAlign: 'center'}}>{s.samlet_score}</div>
+                <div style={{
+                  backgroundColor: 
+                    Number(s.samlet_score) > 4.49 ? '#2e7d32' : 
+                    Number(s.samlet_score) > 3.49 ? '#66bb6a' : 
+                    Number(s.samlet_score) > 2.99 ? '#c8e6c9' : 
+                    Number(s.samlet_score) > 2.49 ? '#ffa726' : 
+                    '#ef5350',
+                  color: (Number(s.samlet_score) > 2.99 && Number(s.samlet_score) < 3.5) ? '#333' : 'white',
+                  padding: '10px', 
+                  borderRadius: '5px', 
+                  fontWeight: 'bold', 
+                  minWidth: '40px', 
+                  textAlign: 'center'
+                }}>
+                  {s.samlet_score}
+                </div>
                 <span style={{color: '#0056a4', fontSize: '20px'}}>›</span>
               </div>
             </div>
