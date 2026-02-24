@@ -104,7 +104,12 @@ export default function HobroScoutingApp() {
           <input type="text" placeholder="Navn" style={inputStyle} value={formData.navn} onChange={e => setFormData({...formData, navn: e.target.value})} />
           <input type="text" placeholder="Klub" style={inputStyle} value={formData.klub} onChange={e => setFormData({...formData, klub: e.target.value})} />
           <input type="text" placeholder="Født (DD-MM-ÅÅ)" style={inputStyle} value={formData.foedt} onChange={e => setFormData({...formData, foedt: e.target.value})} />
-          <input type="number" placeholder="Årgang (f.eks. 2014)" style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})} />
+          <label style={{fontSize: '12px', fontWeight: 'bold'}}>ÅRGANG</label>
+<select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>
+  {['2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
+    <option key={aar} value={aar}>{aar}</option>
+  ))}
+</select>
           
           <label>RVE (1-3):</label>
           <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
@@ -141,7 +146,7 @@ export default function HobroScoutingApp() {
       ) : (
         <div style={{padding: '15px'}}>
           <div style={{display: 'flex', gap: '8px', marginBottom: '20px', overflowX: 'auto', paddingBottom: '10px'}}>
-            {['Alle', '2013', '2014', '2015', '2016'].map(aar => (
+          {['Alle', '2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
               <button key={aar} onClick={() => setValgtAargang(aar)} style={{padding: '8px 15px', borderRadius: '20px', border: 'none', flexShrink: 0, backgroundColor: valgtAargang === aar ? '#0056a4' : 'white', color: valgtAargang === aar ? 'white' : 'black'}}>{aar}</button>
             ))}
           </div>
