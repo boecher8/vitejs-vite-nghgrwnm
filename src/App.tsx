@@ -68,4 +68,8 @@ export default function HobroScoutingApp() {
     }
   };
 
-  const inputStyle =
+  const inputStyle = { width: '100%', padding: '10px', marginBottom: '10px', borderRadius: '5px', border: '1px solid #ccc', boxSizing: 'border-box', color: '#333' };
+
+  if (!isLoggedIn) {
+    return (
+      <div style={{backgroundColor: '#00
