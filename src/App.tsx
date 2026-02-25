@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import logo from './logo.png'; // Her importeres dit uploadede logo
 
 const supabaseUrl = 'https://gkammcdnosumroyekagu.supabase.co';
 const supabaseKey = 'sb_publishable_5Ww3Bq0uS5n3BZfPRdyxiA_DEkuoSDr';
@@ -19,7 +20,7 @@ export default function HobroScoutingApp() {
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
     pros: '', cons: '', udvikling: '', oplevelse: 'Middel', proces: 'Skal følges',
     spillertype: 'Spilfordeler',
-    niveau: '' // Nyt felt
+    niveau: '' 
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -74,10 +75,11 @@ export default function HobroScoutingApp() {
   if (!isLoggedIn) {
     return (
       <div style={{backgroundColor: '#0056a4', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'sans-serif', padding: '20px'}}>
+        {/* Her bruges dit lokale logo fra src mappen */}
         <img 
-          src="https://upload.wikimedia.org/wikipedia/da/thumb/b/b2/Hobro_IK_Logo.svg/1200px-Hobro_IK_Logo.svg.png" 
+          src={logo} 
           alt="HIK Logo" 
-          style={{width: '120px', marginBottom: '20px'}} 
+          style={{width: '150px', marginBottom: '20px', objectFit: 'contain'}} 
         />
         <h1 style={{marginBottom: '20px', letterSpacing: '2px', textAlign: 'center', fontSize: '1.5rem'}}>HOBRO IK SCOUTING</h1>
         <div style={{width: '100%', maxWidth: '300px'}}>
