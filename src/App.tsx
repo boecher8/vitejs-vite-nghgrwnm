@@ -28,7 +28,12 @@ export default function HobroScoutingApp() {
   useEffect(() => { if (isLoggedIn) hentSpillere(); }, [isLoggedIn]);
 
   const hentSpillere = async () => {
-    const { data, error } = await supabase.from('spillere').select('*').order('dato', { ascending: false });
+    const { data, error } = await supabase
+      .from('spillere')
+      .select('*')
+      .order('samlet_score', { ascending: false }) // Sorterer efter højeste score
+      .order('dato', { ascending: false });        // Ved ens score, tag den nyeste dato
+    
     if (!error) setSpillere(data || []);
   };
 
