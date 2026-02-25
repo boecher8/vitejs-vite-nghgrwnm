@@ -18,7 +18,8 @@ export default function HobroScoutingApp() {
     navn: '', klub: '', aargang: '2014', foedt: '', rve: '1', position: '', ben: 'Højre', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
     pros: '', cons: '', udvikling: '', oplevelse: 'Middel', proces: 'Skal følges',
-    spillertype: 'Spilfordeler'
+    spillertype: 'Spilfordeler',
+    niveau: '' // Nyt felt
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -26,7 +27,7 @@ export default function HobroScoutingApp() {
   useEffect(() => { if (isLoggedIn) hentSpillere(); }, [isLoggedIn]);
 
   const hentSpillere = async () => {
-    const { data, error } = await supabase.from('spillere').select('*').order('samlet_score', { ascending: false });
+    const { data, error } = await supabase.from('spillere').select('*').order('dato', { ascending: false });
     if (!error) setSpillere(data || []);
   };
 
@@ -73,27 +74,34 @@ export default function HobroScoutingApp() {
   if (!isLoggedIn) {
     return (
       <div style={{backgroundColor: '#0056a4', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'white', fontFamily: 'sans-serif', padding: '20px'}}>
-        <h1 style={{marginBottom: '20px', letterSpacing: '2px', textAlign: 'center'}}>HOBRO IK SCOUTING</h1>
-        <input 
-          type="text" 
-          placeholder="Password" 
-          style={inputStyle} 
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && (password === 'HIK1234' ? setIsLoggedIn(true) : alert('Forkert!'))} 
+        <img 
+          src="https://upload.wikimedia.org/wikipedia/da/thumb/b/b2/Hobro_IK_Logo.svg/1200px-Hobro_IK_Logo.svg.png" 
+          alt="HIK Logo" 
+          style={{width: '120px', marginBottom: '20px'}} 
         />
-        <button 
-          onClick={() => password === 'HIK1234' ? setIsLoggedIn(true) : alert('Forkert!')} 
-          style={{padding: '10px 30px', backgroundColor: '#fdef42', border: 'none', borderRadius: '5px', fontWeight: 'bold', color: '#0056a4'}}
-        >
-          LOG IND
-        </button>
+        <h1 style={{marginBottom: '20px', letterSpacing: '2px', textAlign: 'center', fontSize: '1.5rem'}}>HOBRO IK SCOUTING</h1>
+        <div style={{width: '100%', maxWidth: '300px'}}>
+          <input 
+            type="password" 
+            placeholder="Password" 
+            style={inputStyle} 
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && (password === 'HIK1234' ? setIsLoggedIn(true) : alert('Forkert!'))} 
+          />
+          <button 
+            onClick={() => password === 'HIK1234' ? setIsLoggedIn(true) : alert('Forkert!')} 
+            style={{width: '100%', padding: '12px', backgroundColor: '#fdef42', border: 'none', borderRadius: '5px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}
+          >
+            LOG IND
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
     <div style={{fontFamily: 'sans-serif', backgroundColor: '#f0f2f5', minHeight: '100vh'}}>
-      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
+      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
         <span style={{fontWeight: 'bold'}}>HIK Scouting</span>
         <button onClick={aabenNyFormular} style={{backgroundColor: '#fdef42', border: 'none', padding: '8px 15px', borderRadius: '5px', fontWeight: 'bold', color: '#0056a4'}}>+ NY SPILLER</button>
       </header>
@@ -107,6 +115,7 @@ export default function HobroScoutingApp() {
           
           <input type="text" placeholder="Navn" style={inputStyle} value={formData.navn} onChange={e => setFormData({...formData, navn: e.target.value})} />
           <input type="text" placeholder="Klub" style={inputStyle} value={formData.klub} onChange={e => setFormData({...formData, klub: e.target.value})} />
+          <input type="text" placeholder="Niveau (f.eks. Liga 1 / Træning)" style={inputStyle} value={formData.niveau} onChange={e => setFormData({...formData, niveau: e.target.value})} />
           <input type="text" placeholder="Født (DD-MM-ÅÅ)" style={inputStyle} value={formData.foedt} onChange={e => setFormData({...formData, foedt: e.target.value})} />
           
           <label style={{fontSize: '12px', fontWeight: 'bold'}}>ÅRGANG</label>
@@ -167,13 +176,15 @@ export default function HobroScoutingApp() {
           {spillere.filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang).map(s => (
             <div key={s.id} onClick={() => aabenRedigering(s)} style={{backgroundColor: 'white', padding: '15px', borderRadius: '10px', marginBottom: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: '5px solid #fdef42', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)'}}>
               <div>
-                <div style={{fontWeight: 'bold'}}>{s.navn} ({s.aargang})</div>
-                <div style={{fontSize: '11px', color: '#666', marginBottom: '4px'}}>{s.klub} • {s.position}</div>
+                <div style={{fontWeight: 'bold', fontSize: '1.1rem'}}>{s.navn} ({s.aargang})</div>
+                <div style={{fontSize: '11px', color: '#666', marginBottom: '4px'}}>
+                   {s.dato} • {s.klub} {s.niveau ? `• ${s.niveau}` : ''}
+                </div>
                 <div style={{display: 'flex', gap: '5px', alignItems: 'center'}}>
                   <span style={{fontSize: '10px', backgroundColor: '#0056a4', color: 'white', padding: '2px 8px', borderRadius: '12px', fontWeight: 'bold'}}>
                     {s.spillertype || 'Udefineret'}
                   </span>
-                  <span style={{fontSize: '10px', color: '#999'}}>RVE: {s.rve}</span>
+                  <span style={{fontSize: '10px', color: '#999'}}>Pos: {s.position} • RVE: {s.rve}</span>
                 </div>
               </div>
               <div style={{display: 'flex', alignItems: 'center', gap: '10px'}}>
