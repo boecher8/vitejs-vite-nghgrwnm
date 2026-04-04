@@ -79,12 +79,18 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
-    // FIX: Sørger for at RVE altid sendes som et rent tal (integer) til databasen
-    const rveTal = String(formData.rve).charAt(0); 
+    
+    // Tvinger alle tal-felter til at være faktiske tal (integers/floats)
     const dataTilGem = { 
       ...formData, 
-      samlet_score: samletScore, 
-      rve: parseInt(rveTal) 
+      samlet_score: parseFloat(samletScore.replace(',', '.')),
+      rve: parseInt(String(formData.rve).replace(/[^0-9]/g, '')), // Fjerner alt andet end tal
+      teknik: parseInt(formData.teknik),
+      taktisk: parseInt(formData.taktisk),
+      fysisk: parseInt(formData.fysisk),
+      sammenhold: parseInt(formData.sammenhold),
+      speed: parseInt(formData.speed),
+      indsats_rve: parseInt(formData.indsats_rve)
     };
     
     if (!formData.video_link || formData.video_link.trim() === '') {
@@ -97,6 +103,7 @@ export default function HobroScoutingApp() {
 
     if (error) {
       alert("Fejl ved gem: " + error.message);
+      console.log("Data der fejlede:", dataTilGem);
     } else {
       setVisFormular(false);
       hentSpillere();
@@ -214,12 +221,14 @@ export default function HobroScoutingApp() {
           <label style={labelStyle}>SPILLERTYPE</label>
           <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
           <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
+          
           <label style={labelStyle}>RVE</label>
           <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
             <option value="1">1 (Lille)</option>
             <option value="2">2 (Mellem)</option>
             <option value="3">3 (Stor)</option>
           </select>
+
           <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Karakterer (1-6)</h2>
           {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
