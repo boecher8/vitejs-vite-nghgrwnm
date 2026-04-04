@@ -183,7 +183,8 @@ export default function HobroScoutingApp() {
   const topBtnStyle = (bg = 'white', color = '#0056a4') => ({
     backgroundColor: bg, border: 'none', padding: '6px 10px', 
     borderRadius: '4px', fontWeight: 'bold', color: color, 
-    fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap'
+    fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap',
+    flex: '1', textAlign: 'center'
   });
 
   const filterFarveStyle = (farve, textColor, active) => ({
@@ -213,15 +214,21 @@ export default function HobroScoutingApp() {
   return (
     <div style={{fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh'}}>
       <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
-        <div style={{marginRight: '15px'}}>
+        <div style={{flex: '1'}}>
           <div style={{fontWeight: 'bold', fontSize: '1rem'}}>HIK Scouting</div>
           <div style={{fontSize: '0.65rem', opacity: 0.8}}>{user?.email}</div>
         </div>
-        <div style={{display: 'flex', gap: '6px'}}>
-          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle()}>MANUAL</button>
-          <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle()}>PP MODEL</button>
-          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={topBtnStyle('#fdef42')}>OPRET SPILLER</button>
-          <button onClick={handleLogout} style={topBtnStyle('#ff4d4d', 'white')}>LOG UD</button>
+        
+        {/* KNAPPER OPdelt PÅ TO LINJER */}
+        <div style={{display: 'flex', flexDirection: 'column', gap: '5px', minWidth: '180px'}}>
+          <div style={{display: 'flex', gap: '5px'}}>
+             <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={topBtnStyle('#fdef42')}>OPRET SPILLER</button>
+             <button onClick={handleLogout} style={topBtnStyle('#ff4d4d', 'white')}>LOG UD</button>
+          </div>
+          <div style={{display: 'flex', gap: '5px'}}>
+            <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle()}>MANUAL</button>
+            <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle()}>PP MODEL</button>
+          </div>
         </div>
       </header>
 
