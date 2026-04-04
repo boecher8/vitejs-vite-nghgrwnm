@@ -15,7 +15,7 @@ export default function HobroScoutingApp() {
   const [visFormular, setVisFormular] = useState(false);
   const [redigeringsId, setRedigeringsId] = useState(null);
   const [valgtAargang, setValgtAargang] = useState('Alle');
-  const [valgtKlub, setValgtKlub] = useState('Alle'); // NY: State til klub-filtrering
+  const [valgtKlub, setValgtKlub] = useState('Alle');
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
@@ -26,8 +26,9 @@ export default function HobroScoutingApp() {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // LINKET TIL DIN PDF FIL I SUPABASE (Husk at opdatere hvis filnavnet ændres)
+  // LINKS TIL DINE PDF FILER I SUPABASE
   const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/Manualer/scout_manual_2026.pdf";
+  const ppModelUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/ppmodel/pp_model_2026.pdf";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -47,7 +48,7 @@ export default function HobroScoutingApp() {
   };
 
   const handleLogout = async () => {
-    await supabase.signOut();
+    await supabase.auth.signOut();
     setUser(null);
   };
 
@@ -64,30 +65,29 @@ export default function HobroScoutingApp() {
     return isNaN(n) ? '0,0' : n.toFixed(1).replace('.', ',');
   };
 
-  // OPDATERET: Farveskala med de præcise intervaller du bad om
   const getScoreStyle = (score) => {
     const s = parseFloat(score);
     let bgColor = '#ef5350'; 
     let textColor = 'white';
 
     if (s >= 4.49) {
-      bgColor = '#1b5e20'; // Mørkegrøn
+      bgColor = '#1b5e20'; 
       textColor = 'white';
     } 
     else if (s >= 3.99) {
-      bgColor = '#4caf50'; // Alm. Grøn
+      bgColor = '#4caf50'; 
       textColor = 'white';
     } 
     else if (s >= 3.49) {
-      bgColor = '#ccff90'; // Lysegrøn
+      bgColor = '#ccff90'; 
       textColor = 'black';
     } 
     else if (s >= 3.00) {
-      bgColor = '#ffa726'; // Orange
+      bgColor = '#ffa726'; 
       textColor = 'black';
     } 
     else {
-      bgColor = '#ef5350'; // Rød (under 3.00)
+      bgColor = '#ef5350'; 
       textColor = 'white';
     }
 
@@ -102,7 +102,6 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
-    // FIX: Tager kun det første tegn (tallet) fra RVE for at undgå database-fejl
     const rveTal = String(formData.rve).charAt(0); 
     
     const dataTilGem = { 
@@ -195,7 +194,6 @@ export default function HobroScoutingApp() {
     doc.save(`Scouting_Rapport_${s.navn}.pdf`);
   };
 
-  // NY: Dynamisk liste over klubber til filtrerings-knapper
   const klubber = ['Alle', ...new Set(spillere.map(s => s.klub).filter(k => k))];
 
   const btnStyle = (active) => ({
@@ -205,6 +203,8 @@ export default function HobroScoutingApp() {
     boxShadow: '0 1px 2px rgba(0,0,0,0.1)', fontSize: '12px', 
     whiteSpace: 'nowrap', cursor: 'pointer'
   });
+
+  const topBtnStyle = { backgroundColor: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer' };
 
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box', marginBottom: '12px' };
   const areaStyle = { ...inputStyle, minHeight: '100px', fontFamily: 'sans-serif' };
@@ -231,9 +231,10 @@ export default function HobroScoutingApp() {
           <div style={{fontSize: '0.7rem', opacity: 0.8}}>{user?.email}</div>
         </div>
         <div style={{display: 'flex', gap: '8px', flexShrink: 0}}>
-          <button onClick={() => window.open(manualUrl, '_blank')} style={{backgroundColor: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer'}}>SCOUT MANUAL</button>
-          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{backgroundColor: '#fdef42', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px'}}>+ NY SPILLER</button>
-          <button onClick={handleLogout} style={{backgroundColor: '#ff4d4d', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px'}}>LOG UD</button>
+          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle}>SCOUT MANUAL</button>
+          <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle}>PP MODEL</button>
+          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{backgroundColor: '#fdef42', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer'}}>+ NY SPILLER</button>
+          <button onClick={handleLogout} style={{backgroundColor: '#ff4d4d', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer'}}>LOG UD</button>
         </div>
       </header>
 
@@ -271,14 +272,12 @@ export default function HobroScoutingApp() {
         </div>
       ) : (
         <div style={{padding: '8px'}}>
-          {/* ÅRGANG FILTRERING */}
           <div style={{display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '5px'}}>
             {['Alle', '2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
               <button key={aar} onClick={() => setValgtAargang(aar)} style={btnStyle(valgtAargang === aar)}>{aar}</button>
             ))}
           </div>
 
-          {/* NY: KLUB FILTRERING */}
           <div style={{display: 'flex', gap: '6px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '5px'}}>
             {klubber.map(klub => (
               <button key={klub} onClick={() => setValgtKlub(klub)} style={btnStyle(valgtKlub === klub)}>{klub}</button>
