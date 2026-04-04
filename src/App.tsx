@@ -26,7 +26,7 @@ export default function HobroScoutingApp() {
   const [formData, setFormData] = useState(initialFormData);
 
   // LINKET TIL DIN PDF FIL I SUPABASE
-  const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/Manualer/scout_manual_2026.pdf"
+  const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/manual/scout_manual_2026_HIK.pdf"
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
