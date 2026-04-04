@@ -65,12 +65,30 @@ export default function HobroScoutingApp() {
 
   const getScoreStyle = (score) => {
     const s = parseFloat(score);
-    let bgColor = '#ef5350'; 
+    let bgColor = '#ef5350'; // Standard farve: Rød (under 3.00)
     let textColor = 'white';
-    if (s >= 4.5) bgColor = '#1b5e20';
-    else if (s >= 3,99) bgColor = '#4caf50';
-    else if (s >= 3.49) { bgColor = '#ccff90'; textColor = 'black'; }
-    else if (s >= 2.49) { bgColor = '#ffa726'; textColor = 'black'; }
+  
+    if (s >= 4.49) {
+      bgColor = '#1b5e20'; // Mørkegrøn
+      textColor = 'white';
+    } 
+    else if (s >= 3.99) {
+      bgColor = '#4caf50'; // Alm. Grøn
+      textColor = 'white';
+    } 
+    else if (s >= 3.49) {
+      bgColor = '#ccff90'; // Lysegrøn
+      textColor = 'black';
+    } 
+    else if (s >= 3.00) {
+      bgColor = '#ffa726'; // Orange
+      textColor = 'black';
+    } 
+    else {
+      bgColor = '#ef5350'; // Rød
+      textColor = 'white';
+    }
+  
     return { backgroundColor: bgColor, color: textColor };
   };
 
