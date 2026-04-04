@@ -18,7 +18,7 @@ export default function HobroScoutingApp() {
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
-    navn: '', klub: '', aargang: '2014', foedt: '', rve: '1 (Lille)', position: '', ben: 'Højre', bedoemt_af: '',
+    navn: '', klub: '', aargang: '2014', foedt: '', rve: '1', position: '', ben: 'Højre', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
     pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: '', video_link: ''
   };
@@ -79,15 +79,28 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
-    const dataTilGem = { ...formData, samlet_score: samletScore };
-    if (!formData.video_link || formData.video_link.trim() === '') delete dataTilGem.video_link;
+    // FIX: Sørger for at RVE altid sendes som et rent tal (integer) til databasen
+    const rveTal = String(formData.rve).charAt(0); 
+    const dataTilGem = { 
+      ...formData, 
+      samlet_score: samletScore, 
+      rve: parseInt(rveTal) 
+    };
+    
+    if (!formData.video_link || formData.video_link.trim() === '') {
+      delete dataTilGem.video_link;
+    }
 
     const { error } = redigeringsId 
       ? await supabase.from('spillere').update(dataTilGem).eq('id', redigeringsId)
       : await supabase.from('spillere').insert([dataTilGem]);
 
-    if (error) alert("Fejl: " + error.message);
-    else { setVisFormular(false); hentSpillere(); }
+    if (error) {
+      alert("Fejl ved gem: " + error.message);
+    } else {
+      setVisFormular(false);
+      hentSpillere();
+    }
   };
 
   const clean = (val) => (val === null || val === undefined || val === 'null' ? '' : val);
@@ -159,7 +172,7 @@ export default function HobroScoutingApp() {
   };
 
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box', marginBottom: '12px' };
-  const areaStyle = { ...inputStyle, minHeight: '80px', fontFamily: 'sans-serif' };
+  const areaStyle = { ...inputStyle, minHeight: '100px', fontFamily: 'sans-serif' };
   const labelStyle = { display: 'block', fontWeight: 'bold', fontSize: '13px', color: '#444', marginBottom: '4px', marginTop: '10px' };
 
   if (!user) {
@@ -202,20 +215,21 @@ export default function HobroScoutingApp() {
           <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
           <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
           <label style={labelStyle}>RVE</label>
-          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>{['1 (Lille)', '2 (Mellem)', '3 (Stor)'].map(v => <option key={v} value={v}>{v}</option>)}</select>
+          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
+            <option value="1">1 (Lille)</option>
+            <option value="2">2 (Mellem)</option>
+            <option value="3">3 (Stor)</option>
+          </select>
           <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
-          
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Karakterer (1-6)</h2>
           {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
             <div key={f}><label style={labelStyle}>{f === 'fysisk' ? 'FYSISK INDSATS' : f === 'sammenhold' ? 'SAMMENHOLD OG INDSTILLING' : f === 'speed' ? 'SPEED OG MOTORIK' : f === 'indsats_rve' ? 'GENEREL INDSATS IFT. RVE' : f.toUpperCase()}</label><select style={inputStyle} value={formData[f]} onChange={e => setFormData({...formData, [f]: e.target.value})}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
           ))}
-          
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Notater & Medier</h2>
           <label style={labelStyle}>PROS</label><textarea style={areaStyle} value={formData.pros} onChange={e => setFormData({...formData, pros: e.target.value})} />
           <label style={labelStyle}>CONS</label><textarea style={areaStyle} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
           <label style={labelStyle}>UDVIKLINGSPOTENTIALE</label><textarea style={areaStyle} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
           <label style={labelStyle}>VIDEO LINK (URL)</label><input type="text" style={inputStyle} value={formData.video_link} onChange={e => setFormData({...formData, video_link: e.target.value})} />
-          
           <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer'}}>GEM RAPPORT</button>
           <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer'}}>Fortryd</button>
         </div>
@@ -234,21 +248,17 @@ export default function HobroScoutingApp() {
                 display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr auto', alignItems: 'center', gap: '15px',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid #eee'
               }}>
-                {/* Navn og info */}
                 <div>
                   <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: '#333'}}>{s.navn}</div>
                   <div style={{fontSize: '0.8rem', color: '#888'}}>{s.aargang} • {s.dato}</div>
                 </div>
-                {/* Klub og type */}
                 <div>
                   <div style={{fontWeight: 'bold', fontSize: '1rem', color: '#0056a4'}}>{s.klub}</div>
                   <div style={{fontSize: '0.75rem', color: '#666'}}>{s.spillertype} • {s.position}</div>
                 </div>
-                {/* Score (Dominerende) */}
                 <div style={{...scoreStyle, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
                     {formaterTal(s.samlet_score)}
                 </div>
-                {/* PDF Knap */}
                 <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#fdef42', border: 'none', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
               </div>
             );
