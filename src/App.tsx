@@ -15,6 +15,7 @@ export default function HobroScoutingApp() {
   const [visFormular, setVisFormular] = useState(false);
   const [redigeringsId, setRedigeringsId] = useState(null);
   const [valgtAargang, setValgtAargang] = useState('Alle');
+  const [valgtKlub, setValgtKlub] = useState('Alle'); // NY: State til klub-filtrering
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
@@ -25,8 +26,8 @@ export default function HobroScoutingApp() {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // LINKET TIL DIN PDF FIL I SUPABASE
-  const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/manual/scout_manual_2026_HIK.pdf"
+  // LINKET TIL DIN PDF FIL I SUPABASE (Husk at opdatere hvis filnavnet ændres)
+  const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/Manualer/scout_manual_2026.pdf";
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -46,7 +47,7 @@ export default function HobroScoutingApp() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await supabase.signOut();
     setUser(null);
   };
 
@@ -63,11 +64,12 @@ export default function HobroScoutingApp() {
     return isNaN(n) ? '0,0' : n.toFixed(1).replace('.', ',');
   };
 
+  // OPDATERET: Farveskala med de præcise intervaller du bad om
   const getScoreStyle = (score) => {
     const s = parseFloat(score);
-    let bgColor = '#ef5350'; // Standard farve: Rød (under 3.00)
+    let bgColor = '#ef5350'; 
     let textColor = 'white';
-  
+
     if (s >= 4.49) {
       bgColor = '#1b5e20'; // Mørkegrøn
       textColor = 'white';
@@ -85,10 +87,10 @@ export default function HobroScoutingApp() {
       textColor = 'black';
     } 
     else {
-      bgColor = '#ef5350'; // Rød
+      bgColor = '#ef5350'; // Rød (under 3.00)
       textColor = 'white';
     }
-  
+
     return { backgroundColor: bgColor, color: textColor };
   };
 
@@ -100,7 +102,9 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
+    // FIX: Tager kun det første tegn (tallet) fra RVE for at undgå database-fejl
     const rveTal = String(formData.rve).charAt(0); 
+    
     const dataTilGem = { 
       ...formData, 
       samlet_score: parseFloat(samletScore.replace(',', '.')),
@@ -191,6 +195,17 @@ export default function HobroScoutingApp() {
     doc.save(`Scouting_Rapport_${s.navn}.pdf`);
   };
 
+  // NY: Dynamisk liste over klubber til filtrerings-knapper
+  const klubber = ['Alle', ...new Set(spillere.map(s => s.klub).filter(k => k))];
+
+  const btnStyle = (active) => ({
+    padding: '5px 12px', borderRadius: '20px', border: 'none', 
+    backgroundColor: active ? '#0056a4' : 'white', 
+    color: active ? 'white' : 'black', 
+    boxShadow: '0 1px 2px rgba(0,0,0,0.1)', fontSize: '12px', 
+    whiteSpace: 'nowrap', cursor: 'pointer'
+  });
+
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box', marginBottom: '12px' };
   const areaStyle = { ...inputStyle, minHeight: '100px', fontFamily: 'sans-serif' };
   const labelStyle = { display: 'block', fontWeight: 'bold', fontSize: '13px', color: '#444', marginBottom: '4px', marginTop: '10px' };
@@ -256,33 +271,45 @@ export default function HobroScoutingApp() {
         </div>
       ) : (
         <div style={{padding: '8px'}}>
+          {/* ÅRGANG FILTRERING */}
           <div style={{display: 'flex', gap: '6px', marginBottom: '8px', overflowX: 'auto', paddingBottom: '5px'}}>
             {['Alle', '2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => (
-              <button key={aar} onClick={() => setValgtAargang(aar)} style={{padding: '5px 12px', borderRadius: '20px', border: 'none', backgroundColor: valgtAargang === aar ? '#0056a4' : 'white', color: valgtAargang === aar ? 'white' : 'black', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', fontSize: '12px', whiteSpace: 'nowrap', cursor: 'pointer'}}>{aar}</button>
+              <button key={aar} onClick={() => setValgtAargang(aar)} style={btnStyle(valgtAargang === aar)}>{aar}</button>
             ))}
           </div>
-          {spillere.filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang).map(s => {
-            const scoreStyle = getScoreStyle(s.samlet_score);
-            return (
-              <div key={s.id} onClick={() => {setFormData(s); setRedigeringsId(s.id); setVisFormular(true);}} style={{
-                backgroundColor: 'white', padding: '12px', borderRadius: '8px', marginBottom: '8px', 
-                display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr auto', alignItems: 'center', gap: '15px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid #eee'
-              }}>
-                <div>
-                  <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: '#333'}}>{s.navn}</div>
-                  <div style={{fontSize: '0.8rem', color: '#888'}}>{s.aargang} • {s.dato}</div>
+
+          {/* NY: KLUB FILTRERING */}
+          <div style={{display: 'flex', gap: '6px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '5px'}}>
+            {klubber.map(klub => (
+              <button key={klub} onClick={() => setValgtKlub(klub)} style={btnStyle(valgtKlub === klub)}>{klub}</button>
+            ))}
+          </div>
+
+          {spillere
+            .filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang)
+            .filter(s => valgtKlub === 'Alle' || s.klub === valgtKlub)
+            .map(s => {
+              const scoreStyle = getScoreStyle(s.samlet_score);
+              return (
+                <div key={s.id} onClick={() => {setFormData(s); setRedigeringsId(s.id); setVisFormular(true);}} style={{
+                  backgroundColor: 'white', padding: '12px', borderRadius: '8px', marginBottom: '8px', 
+                  display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr auto', alignItems: 'center', gap: '15px',
+                  boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid #eee'
+                }}>
+                  <div>
+                    <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: '#333'}}>{s.navn}</div>
+                    <div style={{fontSize: '0.8rem', color: '#888'}}>{s.aargang} • {s.dato}</div>
+                  </div>
+                  <div>
+                    <div style={{fontWeight: 'bold', fontSize: '1rem', color: '#0056a4'}}>{s.klub}</div>
+                    <div style={{fontSize: '0.75rem', color: '#666'}}>{s.spillertype} • {s.position}</div>
+                  </div>
+                  <div style={{...scoreStyle, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
+                      {formaterTal(s.samlet_score)}
+                  </div>
+                  <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#fdef42', border: 'none', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
                 </div>
-                <div>
-                  <div style={{fontWeight: 'bold', fontSize: '1rem', color: '#0056a4'}}>{s.klub}</div>
-                  <div style={{fontSize: '0.75rem', color: '#666'}}>{s.spillertype} • {s.position}</div>
-                </div>
-                <div style={{...scoreStyle, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
-                    {formaterTal(s.samlet_score)}
-                </div>
-                <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#fdef42', border: 'none', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
-              </div>
-            );
+              );
           })}
         </div>
       )}
