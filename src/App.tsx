@@ -20,7 +20,7 @@ export default function HobroScoutingApp() {
     dato: new Date().toISOString().split('T')[0],
     navn: '', klub: '', aargang: '2014', foedt: '', rve: '1 (Lille)', position: '', ben: 'Højre', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
-    pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: ''
+    pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: '', video_link: ''
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -79,9 +79,8 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
-    // Vi fjerner video_link fra dataen her, så den ikke fejler i databasen
-    const { video_link, ...dataUdenVideo } = formData;
-    const dataTilGem = { ...dataUdenVideo, samlet_score: samletScore };
+    const dataTilGem = { ...formData, samlet_score: samletScore };
+    if (!formData.video_link || formData.video_link.trim() === '') delete dataTilGem.video_link;
 
     const { error } = redigeringsId 
       ? await supabase.from('spillere').update(dataTilGem).eq('id', redigeringsId)
@@ -97,7 +96,6 @@ export default function HobroScoutingApp() {
     const doc = new jsPDF();
     const blue = [0, 86, 164];
     const yellow = [253, 239, 66];
-
     doc.setFillColor(blue[0], blue[1], blue[2]);
     doc.rect(0, 0, 210, 35, 'F');
     doc.setTextColor(255, 255, 255);
@@ -107,13 +105,11 @@ export default function HobroScoutingApp() {
     doc.setFontSize(9);
     doc.text(`Dato: ${clean(s.dato)}`, 165, 15);
     doc.text(`Bedømt af: ${clean(s.bedoemt_af)}`, 165, 20);
-
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.text(clean(s.navn).toUpperCase(), 15, 50);
     doc.setDrawColor(200, 200, 200);
     doc.line(15, 53, 195, 53);
-
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Klub: ${clean(s.klub)}`, 15, 62);
@@ -124,7 +120,6 @@ export default function HobroScoutingApp() {
     doc.text(`Type: ${clean(s.spillertype)}`, 85, 68);
     doc.text(`RVE: ${clean(s.rve)}`, 85, 74);
     doc.text(`Foretrukket ben: ${clean(s.ben)}`, 85, 80);
-
     doc.setFillColor(blue[0], blue[1], blue[2]);
     doc.roundedRect(155, 58, 45, 25, 2, 2, 'F');
     doc.setTextColor(255, 255, 255);
@@ -133,15 +128,9 @@ export default function HobroScoutingApp() {
     doc.text("SAMLET SCORE", 157, 68);
     doc.setFontSize(16);
     doc.text(formaterTal(s.samlet_score), 173, 78);
-
     doc.setTextColor(blue[0], blue[1], blue[2]);
     doc.text("KARAKTER (1-6)", 15, 100);
-    
-    const scores = [
-      ["Teknik", s.teknik], ["Taktisk", s.taktisk], ["Fysisk indsats", s.fysisk],
-      ["Sammenhold og Indstilling", s.sammenhold], ["Speed og motorik", s.speed], ["Generel indsats ift. RVE", s.indsats_rve]
-    ];
-
+    const scores = [["Teknik", s.teknik], ["Taktisk", s.taktisk], ["Fysisk indsats", s.fysisk], ["Sammenhold og Indstilling", s.sammenhold], ["Speed og motorik", s.speed], ["Generel indsats ift. RVE", s.indsats_rve]];
     scores.forEach((item, index) => {
       const y = 110 + (index * 8);
       doc.setTextColor(0,0,0);
@@ -155,7 +144,6 @@ export default function HobroScoutingApp() {
       doc.setFont("helvetica", "bold");
       doc.text(formaterTal(item[1]), 165, y);
     });
-
     let currentY = 170;
     [["PROS", s.pros], ["CONS", s.cons], ["UDVIKLINGSPOTENTIALE", s.udvikling]].forEach(sek => {
       doc.setFont("helvetica", "bold");
@@ -167,7 +155,6 @@ export default function HobroScoutingApp() {
       doc.text(splitText, 15, currentY + 6);
       currentY += (splitText.length * 5) + 12;
     });
-
     doc.save(`Scouting_Rapport_${s.navn}.pdf`);
   };
 
@@ -210,55 +197,25 @@ export default function HobroScoutingApp() {
           <input type="text" placeholder="Klub" style={inputStyle} value={formData.klub} onChange={e => setFormData({...formData, klub: e.target.value})} />
           <input type="text" placeholder="Niveau" style={inputStyle} value={formData.niveau} onChange={e => setFormData({...formData, niveau: e.target.value})} />
           <input type="text" placeholder="Født (DD-MM-ÅÅ)" style={inputStyle} value={formData.foedt} onChange={e => setFormData({...formData, foedt: e.target.value})} />
-          
-          <div style={{display: 'flex', gap: '10px'}}>
-              <div style={{flex: 1}}>
-                  <label style={labelStyle}>ÅRGANG</label>
-                  <select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>
-                    {['2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => <option key={aar} value={aar}>{aar}</option>)}
-                  </select>
-              </div>
-              <div style={{flex: 1}}>
-                  <label style={labelStyle}>BEN</label>
-                  <select style={inputStyle} value={formData.ben} onChange={e => setFormData({...formData, ben: e.target.value})}>
-                    {['Højre', 'Venstre', 'Begge'].map(b => <option key={b} value={b}>{b}</option>)}
-                  </select>
-              </div>
-          </div>
-
+          <div style={{display: 'flex', gap: '10px'}}><div style={{flex: 1}}><label style={labelStyle}>ÅRGANG</label><select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>{['2013', '2014', '2015', '2016', '2017', '2018', '2019'].map(aar => <option key={aar} value={aar}>{aar}</option>)}</select></div><div style={{flex: 1}}><label style={labelStyle}>BEN</label><select style={inputStyle} value={formData.ben} onChange={e => setFormData({...formData, ben: e.target.value})}>{['Højre', 'Venstre', 'Begge'].map(b => <option key={b} value={b}>{b}</option>)}</select></div></div>
           <label style={labelStyle}>SPILLERTYPE</label>
-          <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>
-            {['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
+          <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
           <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
-          
           <label style={labelStyle}>RVE</label>
-          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
-            {['1 (Lille)', '2 (Mellem)', '3 (Stor)'].map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-
+          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>{['1 (Lille)', '2 (Mellem)', '3 (Stor)'].map(v => <option key={v} value={v}>{v}</option>)}</select>
           <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
           
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Karakterer (1-6)</h2>
           {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
-            <div key={f}>
-                <label style={labelStyle}>{f === 'fysisk' ? 'FYSISK INDSATS' : f === 'sammenhold' ? 'SAMMENHOLD OG INDSTILLING' : f === 'speed' ? 'SPEED OG MOTORIK' : f === 'indsats_rve' ? 'GENEREL INDSATS IFT. RVE' : f.toUpperCase()}</label>
-                <select style={inputStyle} value={formData[f]} onChange={e => setFormData({...formData, [f]: e.target.value})}>
-                    {[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}
-                </select>
-            </div>
+            <div key={f}><label style={labelStyle}>{f === 'fysisk' ? 'FYSISK INDSATS' : f === 'sammenhold' ? 'SAMMENHOLD OG INDSTILLING' : f === 'speed' ? 'SPEED OG MOTORIK' : f === 'indsats_rve' ? 'GENEREL INDSATS IFT. RVE' : f.toUpperCase()}</label><select style={inputStyle} value={formData[f]} onChange={e => setFormData({...formData, [f]: e.target.value})}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
           ))}
-
-          <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Notater</h2>
-          <label style={labelStyle}>PROS</label>
-          <textarea style={areaStyle} value={formData.pros} onChange={e => setFormData({...formData, pros: e.target.value})} />
           
-          <label style={labelStyle}>CONS</label>
-          <textarea style={areaStyle} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
+          <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Notater & Medier</h2>
+          <label style={labelStyle}>PROS</label><textarea style={areaStyle} value={formData.pros} onChange={e => setFormData({...formData, pros: e.target.value})} />
+          <label style={labelStyle}>CONS</label><textarea style={areaStyle} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
+          <label style={labelStyle}>UDVIKLINGSPOTENTIALE</label><textarea style={areaStyle} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
+          <label style={labelStyle}>VIDEO LINK (URL)</label><input type="text" style={inputStyle} value={formData.video_link} onChange={e => setFormData({...formData, video_link: e.target.value})} />
           
-          <label style={labelStyle}>UDVIKLINGSPOTENTIALE</label>
-          <textarea style={areaStyle} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
-
           <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer'}}>GEM RAPPORT</button>
           <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer'}}>Fortryd</button>
         </div>
@@ -269,37 +226,30 @@ export default function HobroScoutingApp() {
               <button key={aar} onClick={() => setValgtAargang(aar)} style={{padding: '5px 12px', borderRadius: '20px', border: 'none', backgroundColor: valgtAargang === aar ? '#0056a4' : 'white', color: valgtAargang === aar ? 'white' : 'black', boxShadow: '0 1px 2px rgba(0,0,0,0.1)', fontSize: '12px', whiteSpace: 'nowrap', cursor: 'pointer'}}>{aar}</button>
             ))}
           </div>
-          
           {spillere.filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang).map(s => {
             const scoreStyle = getScoreStyle(s.samlet_score);
             return (
               <div key={s.id} onClick={() => {setFormData(s); setRedigeringsId(s.id); setVisFormular(true);}} style={{
-                backgroundColor: 'white', 
-                padding: '6px 12px', 
-                borderRadius: '6px', 
-                marginBottom: '4px', 
-                display: 'grid', 
-                gridTemplateColumns: '2fr 0.8fr 1.5fr 1.2fr 2fr auto', 
-                alignItems: 'center', 
-                gap: '15px',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.05)', 
-                cursor: 'pointer',
-                border: '1px solid #eee'
+                backgroundColor: 'white', padding: '12px', borderRadius: '8px', marginBottom: '8px', 
+                display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr auto', alignItems: 'center', gap: '15px',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid #eee'
               }}>
-                <div style={{fontWeight: 'bold', fontSize: '0.9rem', color: '#333', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{s.navn}</div>
-                <div style={{fontSize: '0.8rem', color: '#666'}}>{s.aargang}</div>
-                <div style={{fontSize: '0.75rem', color: '#555', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'}}>{s.klub} {s.niveau ? `(${s.niveau})` : ''}</div>
-                <div style={{fontSize: '0.7rem', color: '#999'}}>{s.dato}</div>
-                <div style={{display: 'flex', gap: '6px', alignItems: 'center'}}>
-                    <span style={{backgroundColor: '#0056a4', color: 'white', padding: '1px 6px', borderRadius: '8px', fontSize: '0.6rem', fontWeight: 'bold', whiteSpace: 'nowrap'}}>{s.spillertype}</span>
-                    <span style={{fontSize: '0.7rem', color: '#777', whiteSpace: 'nowrap'}}>{s.position}</span>
+                {/* Navn og info */}
+                <div>
+                  <div style={{fontWeight: 'bold', fontSize: '1.1rem', color: '#333'}}>{s.navn}</div>
+                  <div style={{fontSize: '0.8rem', color: '#888'}}>{s.aargang} • {s.dato}</div>
                 </div>
-                <div style={{display: 'flex', alignItems: 'center', gap: '10px', justifySelf: 'end'}}>
-                  <div style={{...scoreStyle, width: '32px', height: '32px', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem'}}>
-                      {formaterTal(s.samlet_score)}
-                  </div>
-                  <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#f0f2f5', border: '1px solid #ddd', borderRadius: '4px', padding: '3px 8px', fontSize: '9px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
+                {/* Klub og type */}
+                <div>
+                  <div style={{fontWeight: 'bold', fontSize: '1rem', color: '#0056a4'}}>{s.klub}</div>
+                  <div style={{fontSize: '0.75rem', color: '#666'}}>{s.spillertype} • {s.position}</div>
                 </div>
+                {/* Score (Dominerende) */}
+                <div style={{...scoreStyle, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
+                    {formaterTal(s.samlet_score)}
+                </div>
+                {/* PDF Knap */}
+                <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#fdef42', border: 'none', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
               </div>
             );
           })}
