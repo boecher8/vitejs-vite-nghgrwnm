@@ -16,6 +16,7 @@ export default function HobroScoutingApp() {
   const [redigeringsId, setRedigeringsId] = useState(null);
   const [valgtAargang, setValgtAargang] = useState('Alle');
   const [valgtKlub, setValgtKlub] = useState('Alle');
+  const [valgtFarveFilter, setValgtFarveFilter] = useState('Alle');
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
@@ -66,14 +67,11 @@ export default function HobroScoutingApp() {
 
   const getScoreStyle = (score) => {
     const s = parseFloat(score);
-    let bgColor = '#ef5350'; 
-    let textColor = 'white';
-    if (s >= 4.49) { bgColor = '#1b5e20'; textColor = 'white'; } 
-    else if (s >= 3.99) { bgColor = '#4caf50'; textColor = 'white'; } 
-    else if (s >= 3.49) { bgColor = '#ccff90'; textColor = 'black'; } 
-    else if (s >= 3.00) { bgColor = '#ffa726'; textColor = 'black'; } 
-    else { bgColor = '#ef5350'; textColor = 'white'; }
-    return { backgroundColor: bgColor, color: textColor };
+    if (s >= 4.49) return { bgColor: '#1b5e20', textColor: 'white', label: 'Mørkegrøn', range: '>4,5' };
+    if (s >= 3.99) return { bgColor: '#4caf50', textColor: 'white', label: 'Grøn', range: '>4,0' };
+    if (s >= 3.49) return { bgColor: '#ccff90', textColor: 'black', label: 'Lysegrøn', range: '>3,5' };
+    if (s >= 3.00) return { bgColor: '#ffa726', textColor: 'black', label: 'Orange', range: '>3,0' };
+    return { bgColor: '#ef5350', textColor: 'white', label: 'Rød', range: '<3,0' };
   };
 
   const beregnScore = () => {
@@ -182,13 +180,18 @@ export default function HobroScoutingApp() {
     whiteSpace: 'nowrap', cursor: 'pointer'
   });
 
-  // OPDATERET: Slankere knap-design til toppen
-  const topBtnStyle = { 
-    backgroundColor: 'white', border: 'none', padding: '5px 8px', 
-    borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', 
-    fontSize: '11px', cursor: 'pointer', flex: '1', textAlign: 'center',
-    minWidth: 'fit-content'
-  };
+  const topBtnStyle = (bg = 'white', color = '#0056a4') => ({
+    backgroundColor: bg, border: 'none', padding: '6px 10px', 
+    borderRadius: '4px', fontWeight: 'bold', color: color, 
+    fontSize: '11px', cursor: 'pointer', whiteSpace: 'nowrap'
+  });
+
+  const filterFarveStyle = (farve, textColor, active) => ({
+    width: '42px', height: '42px', borderRadius: '50%', border: active ? '3px solid #0056a4' : '1px solid #ccc',
+    backgroundColor: farve, color: textColor, cursor: 'pointer', flexShrink: 0, 
+    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '10px', fontWeight: 'bold',
+    boxShadow: active ? '0 0 5px rgba(0,0,0,0.3)' : 'none'
+  });
 
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box', marginBottom: '12px' };
   const areaStyle = { ...inputStyle, minHeight: '100px', fontFamily: 'sans-serif' };
@@ -209,17 +212,16 @@ export default function HobroScoutingApp() {
 
   return (
     <div style={{fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh'}}>
-      {/* OPDATERET HEADER: Flex-wrap og bedre pladsstyring */}
-      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
-        <div style={{flex: '1 1 100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px'}}>
+      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
+        <div style={{marginRight: '15px'}}>
           <div style={{fontWeight: 'bold', fontSize: '1rem'}}>HIK Scouting</div>
           <div style={{fontSize: '0.65rem', opacity: 0.8}}>{user?.email}</div>
         </div>
-        <div style={{display: 'flex', gap: '5px', width: '100%', justifyContent: 'space-between'}}>
-          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle}>MANUAL</button>
-          <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle}>PP MODEL</button>
-          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{...topBtnStyle, backgroundColor: '#fdef42'}}>+ NY</button>
-          <button onClick={handleLogout} style={{...topBtnStyle, backgroundColor: '#ff4d4d', color: 'white'}}>LOG UD</button>
+        <div style={{display: 'flex', gap: '6px'}}>
+          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle()}>MANUAL</button>
+          <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle()}>PP MODEL</button>
+          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={topBtnStyle('#fdef42')}>OPRET SPILLER</button>
+          <button onClick={handleLogout} style={topBtnStyle('#ff4d4d', 'white')}>LOG UD</button>
         </div>
       </header>
 
@@ -258,14 +260,25 @@ export default function HobroScoutingApp() {
               <button key={aar} onClick={() => setValgtAargang(aar)} style={btnStyle(valgtAargang === aar)}>{aar}</button>
             ))}
           </div>
-          <div style={{display: 'flex', gap: '6px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '5px'}}>
+          <div style={{display: 'flex', gap: '6px', marginBottom: '12px', overflowX: 'auto', paddingBottom: '5px'}}>
             {klubber.map(klub => (
               <button key={klub} onClick={() => setValgtKlub(klub)} style={btnStyle(valgtKlub === klub)}>{klub}</button>
             ))}
           </div>
+          
+          <div style={{display: 'flex', gap: '10px', alignItems: 'center', marginBottom: '15px', backgroundColor: 'white', padding: '10px', borderRadius: '8px', boxShadow: '0 1px 2px rgba(0,0,0,0.05)', overflowX: 'auto'}}>
+            <button onClick={() => setValgtFarveFilter('Alle')} style={{...btnStyle(valgtFarveFilter === 'Alle'), padding: '8px 12px', borderRadius: '4px'}}>Alle</button>
+            <div style={filterFarveStyle('#1b5e20', 'white', valgtFarveFilter === 'Mørkegrøn')} onClick={() => setValgtFarveFilter('Mørkegrøn')}>&gt;4,5</div>
+            <div style={filterFarveStyle('#4caf50', 'white', valgtFarveFilter === 'Grøn')} onClick={() => setValgtFarveFilter('Grøn')}>&gt;4,0</div>
+            <div style={filterFarveStyle('#ccff90', 'black', valgtFarveFilter === 'Lysegrøn')} onClick={() => setValgtFarveFilter('Lysegrøn')}>&gt;3,5</div>
+            <div style={filterFarveStyle('#ffa726', 'black', valgtFarveFilter === 'Orange')} onClick={() => setValgtFarveFilter('Orange')}>&gt;3,0</div>
+            <div style={filterFarveStyle('#ef5350', 'white', valgtFarveFilter === 'Rød')} onClick={() => setValgtFarveFilter('Rød')}>&lt;3,0</div>
+          </div>
+
           {spillere
             .filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang)
             .filter(s => valgtKlub === 'Alle' || s.klub === valgtKlub)
+            .filter(s => valgtFarveFilter === 'Alle' || getScoreStyle(s.samlet_score).label === valgtFarveFilter)
             .map(s => {
               const scoreStyle = getScoreStyle(s.samlet_score);
               return (
@@ -282,7 +295,7 @@ export default function HobroScoutingApp() {
                     <div style={{fontWeight: 'bold', fontSize: '1rem', color: '#0056a4'}}>{s.klub}</div>
                     <div style={{fontSize: '0.75rem', color: '#666'}}>{s.spillertype} • {s.position}</div>
                   </div>
-                  <div style={{...scoreStyle, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
+                  <div style={{backgroundColor: scoreStyle.bgColor, color: scoreStyle.textColor, width: '45px', height: '45px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1.2rem', justifySelf: 'center'}}>
                       {formaterTal(s.samlet_score)}
                   </div>
                   <button onClick={(e) => { e.stopPropagation(); genererPDF(s); }} style={{backgroundColor: '#fdef42', border: 'none', borderRadius: '4px', padding: '8px 12px', fontSize: '10px', fontWeight: 'bold', color: '#0056a4', cursor: 'pointer'}}>PDF</button>
