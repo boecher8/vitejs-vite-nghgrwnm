@@ -67,10 +67,10 @@ export default function HobroScoutingApp() {
     const s = parseFloat(score);
     let bgColor = '#ef5350'; 
     let textColor = 'white';
-    if (s >= 4.2) bgColor = '#1b5e20';
-    else if (s >= 3.51) bgColor = '#4caf50';
-    else if (s >= 3.0) { bgColor = '#ccff90'; textColor = 'black'; }
-    else if (s >= 2.5) { bgColor = '#ffa726'; textColor = 'black'; }
+    if (s >= 4.5) bgColor = '#1b5e20';
+    else if (s >= 3,99) bgColor = '#4caf50';
+    else if (s >= 3.49) { bgColor = '#ccff90'; textColor = 'black'; }
+    else if (s >= 2.49) { bgColor = '#ffa726'; textColor = 'black'; }
     return { backgroundColor: bgColor, color: textColor };
   };
 
