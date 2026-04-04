@@ -25,6 +25,9 @@ export default function HobroScoutingApp() {
 
   const [formData, setFormData] = useState(initialFormData);
 
+  // LINKET TIL DIN PDF FIL I SUPABASE
+  const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/Manualer/scout_manual_2026.pdf"
+
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) handleUserSession(session.user);
@@ -79,12 +82,11 @@ export default function HobroScoutingApp() {
 
   const gemSpiller = async () => {
     const samletScore = beregnScore();
-    
-    // Tvinger alle tal-felter til at være faktiske tal (integers/floats)
+    const rveTal = String(formData.rve).charAt(0); 
     const dataTilGem = { 
       ...formData, 
       samlet_score: parseFloat(samletScore.replace(',', '.')),
-      rve: parseInt(String(formData.rve).replace(/[^0-9]/g, '')), // Fjerner alt andet end tal
+      rve: parseInt(rveTal),
       teknik: parseInt(formData.teknik),
       taktisk: parseInt(formData.taktisk),
       fysisk: parseInt(formData.fysisk),
@@ -93,21 +95,14 @@ export default function HobroScoutingApp() {
       indsats_rve: parseInt(formData.indsats_rve)
     };
     
-    if (!formData.video_link || formData.video_link.trim() === '') {
-      delete dataTilGem.video_link;
-    }
+    if (!formData.video_link || formData.video_link.trim() === '') delete dataTilGem.video_link;
 
     const { error } = redigeringsId 
       ? await supabase.from('spillere').update(dataTilGem).eq('id', redigeringsId)
       : await supabase.from('spillere').insert([dataTilGem]);
 
-    if (error) {
-      alert("Fejl ved gem: " + error.message);
-      console.log("Data der fejlede:", dataTilGem);
-    } else {
-      setVisFormular(false);
-      hentSpillere();
-    }
+    if (error) alert("Fejl ved gem: " + error.message);
+    else { setVisFormular(false); hentSpillere(); }
   };
 
   const clean = (val) => (val === null || val === undefined || val === 'null' ? '' : val);
@@ -198,11 +193,12 @@ export default function HobroScoutingApp() {
   return (
     <div style={{fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh'}}>
       <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
-        <div>
+        <div style={{flex: 1}}>
           <div style={{fontWeight: 'bold', fontSize: '1.1rem'}}>HIK Scouting</div>
           <div style={{fontSize: '0.7rem', opacity: 0.8}}>{user?.email}</div>
         </div>
-        <div style={{display: 'flex', gap: '8px'}}>
+        <div style={{display: 'flex', gap: '8px', flexShrink: 0}}>
+          <button onClick={() => window.open(manualUrl, '_blank')} style={{backgroundColor: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer'}}>SCOUT MANUAL</button>
           <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{backgroundColor: '#fdef42', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px'}}>+ NY SPILLER</button>
           <button onClick={handleLogout} style={{backgroundColor: '#ff4d4d', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px'}}>LOG UD</button>
         </div>
@@ -221,14 +217,12 @@ export default function HobroScoutingApp() {
           <label style={labelStyle}>SPILLERTYPE</label>
           <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
           <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
-          
           <label style={labelStyle}>RVE</label>
           <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
             <option value="1">1 (Lille)</option>
             <option value="2">2 (Mellem)</option>
             <option value="3">3 (Stor)</option>
           </select>
-
           <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Karakterer (1-6)</h2>
           {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
