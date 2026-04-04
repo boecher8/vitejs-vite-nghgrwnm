@@ -26,7 +26,6 @@ export default function HobroScoutingApp() {
 
   const [formData, setFormData] = useState(initialFormData);
 
-  // LINKS TIL DINE PDF FILER I SUPABASE
   const manualUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/Manualer/scout_manual_2026.pdf";
   const ppModelUrl = "https://gkammcdnosumroyekagu.supabase.co/storage/v1/object/public/ppmodel/pp_model_2026.pdf";
 
@@ -69,28 +68,11 @@ export default function HobroScoutingApp() {
     const s = parseFloat(score);
     let bgColor = '#ef5350'; 
     let textColor = 'white';
-
-    if (s >= 4.49) {
-      bgColor = '#1b5e20'; 
-      textColor = 'white';
-    } 
-    else if (s >= 3.99) {
-      bgColor = '#4caf50'; 
-      textColor = 'white';
-    } 
-    else if (s >= 3.49) {
-      bgColor = '#ccff90'; 
-      textColor = 'black';
-    } 
-    else if (s >= 3.00) {
-      bgColor = '#ffa726'; 
-      textColor = 'black';
-    } 
-    else {
-      bgColor = '#ef5350'; 
-      textColor = 'white';
-    }
-
+    if (s >= 4.49) { bgColor = '#1b5e20'; textColor = 'white'; } 
+    else if (s >= 3.99) { bgColor = '#4caf50'; textColor = 'white'; } 
+    else if (s >= 3.49) { bgColor = '#ccff90'; textColor = 'black'; } 
+    else if (s >= 3.00) { bgColor = '#ffa726'; textColor = 'black'; } 
+    else { bgColor = '#ef5350'; textColor = 'white'; }
     return { backgroundColor: bgColor, color: textColor };
   };
 
@@ -103,7 +85,6 @@ export default function HobroScoutingApp() {
   const gemSpiller = async () => {
     const samletScore = beregnScore();
     const rveTal = String(formData.rve).charAt(0); 
-    
     const dataTilGem = { 
       ...formData, 
       samlet_score: parseFloat(samletScore.replace(',', '.')),
@@ -115,13 +96,10 @@ export default function HobroScoutingApp() {
       speed: parseInt(formData.speed),
       indsats_rve: parseInt(formData.indsats_rve)
     };
-    
     if (!formData.video_link || formData.video_link.trim() === '') delete dataTilGem.video_link;
-
     const { error } = redigeringsId 
       ? await supabase.from('spillere').update(dataTilGem).eq('id', redigeringsId)
       : await supabase.from('spillere').insert([dataTilGem]);
-
     if (error) alert("Fejl ved gem: " + error.message);
     else { setVisFormular(false); hentSpillere(); }
   };
@@ -204,7 +182,13 @@ export default function HobroScoutingApp() {
     whiteSpace: 'nowrap', cursor: 'pointer'
   });
 
-  const topBtnStyle = { backgroundColor: 'white', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer' };
+  // OPDATERET: Slankere knap-design til toppen
+  const topBtnStyle = { 
+    backgroundColor: 'white', border: 'none', padding: '5px 8px', 
+    borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', 
+    fontSize: '11px', cursor: 'pointer', flex: '1', textAlign: 'center',
+    minWidth: 'fit-content'
+  };
 
   const inputStyle = { width: '100%', padding: '12px', borderRadius: '6px', border: '1px solid #ccc', boxSizing: 'border-box', marginBottom: '12px' };
   const areaStyle = { ...inputStyle, minHeight: '100px', fontFamily: 'sans-serif' };
@@ -225,16 +209,17 @@ export default function HobroScoutingApp() {
 
   return (
     <div style={{fontFamily: 'sans-serif', backgroundColor: '#f8f9fa', minHeight: '100vh'}}>
-      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px 15px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
-        <div style={{flex: 1}}>
-          <div style={{fontWeight: 'bold', fontSize: '1.1rem'}}>HIK Scouting</div>
-          <div style={{fontSize: '0.7rem', opacity: 0.8}}>{user?.email}</div>
+      {/* OPDATERET HEADER: Flex-wrap og bedre pladsstyring */}
+      <header style={{backgroundColor: '#0056a4', color: 'white', padding: '10px', display: 'flex', flexWrap: 'wrap', gap: '8px', alignItems: 'center', position: 'sticky', top: 0, zIndex: 100}}>
+        <div style={{flex: '1 1 100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px'}}>
+          <div style={{fontWeight: 'bold', fontSize: '1rem'}}>HIK Scouting</div>
+          <div style={{fontSize: '0.65rem', opacity: 0.8}}>{user?.email}</div>
         </div>
-        <div style={{display: 'flex', gap: '8px', flexShrink: 0}}>
-          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle}>SCOUT MANUAL</button>
+        <div style={{display: 'flex', gap: '5px', width: '100%', justifyContent: 'space-between'}}>
+          <button onClick={() => window.open(manualUrl, '_blank')} style={topBtnStyle}>MANUAL</button>
           <button onClick={() => window.open(ppModelUrl, '_blank')} style={topBtnStyle}>PP MODEL</button>
-          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{backgroundColor: '#fdef42', border: 'none', padding: '6px 12px', borderRadius: '4px', fontWeight: 'bold', color: '#0056a4', fontSize: '12px', cursor: 'pointer'}}>+ NY SPILLER</button>
-          <button onClick={handleLogout} style={{backgroundColor: '#ff4d4d', color: 'white', border: 'none', padding: '6px 10px', borderRadius: '4px', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer'}}>LOG UD</button>
+          <button onClick={() => {setFormData(initialFormData); setRedigeringsId(null); setVisFormular(true);}} style={{...topBtnStyle, backgroundColor: '#fdef42'}}>+ NY</button>
+          <button onClick={handleLogout} style={{...topBtnStyle, backgroundColor: '#ff4d4d', color: 'white'}}>LOG UD</button>
         </div>
       </header>
 
@@ -252,11 +237,7 @@ export default function HobroScoutingApp() {
           <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
           <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
           <label style={labelStyle}>RVE</label>
-          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
-            <option value="1">1 (Lille)</option>
-            <option value="2">2 (Mellem)</option>
-            <option value="3">3 (Stor)</option>
-          </select>
+          <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}><option value="1">1 (Lille)</option><option value="2">2 (Mellem)</option><option value="3">3 (Stor)</option></select>
           <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
           <h2 style={{fontWeight: 'bold', marginTop: '30px'}}>Karakterer (1-6)</h2>
           {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
@@ -277,13 +258,11 @@ export default function HobroScoutingApp() {
               <button key={aar} onClick={() => setValgtAargang(aar)} style={btnStyle(valgtAargang === aar)}>{aar}</button>
             ))}
           </div>
-
           <div style={{display: 'flex', gap: '6px', marginBottom: '15px', overflowX: 'auto', paddingBottom: '5px'}}>
             {klubber.map(klub => (
               <button key={klub} onClick={() => setValgtKlub(klub)} style={btnStyle(valgtKlub === klub)}>{klub}</button>
             ))}
           </div>
-
           {spillere
             .filter(s => valgtAargang === 'Alle' || String(s.aargang) === valgtAargang)
             .filter(s => valgtKlub === 'Alle' || s.klub === valgtKlub)
