@@ -47,7 +47,8 @@ export default function HobroScoutingApp() {
     dato: new Date().toISOString().split('T')[0],
     navn: '', klub: '', aargang: '2014', foedt: '', rve: '1', position: '', ben: 'Højre', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
-    pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: '', video_link: ''
+    pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: '', video_link: '',
+    spiller_billede: null 
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -64,6 +65,13 @@ export default function HobroScoutingApp() {
       if (session) handleUserSession(session.user);
     });
   }, []);
+
+  // AUTOSAVE LOGIK
+  useEffect(() => {
+    if (visFormular && !redigeringsId) {
+      localStorage.setItem('hik_scout_kladde', JSON.stringify(formData));
+    }
+  }, [formData, visFormular, redigeringsId]);
 
   const handleUserSession = async (currUser) => {
     setUser(currUser);
@@ -87,6 +95,30 @@ export default function HobroScoutingApp() {
       .select('*')
       .order('samlet_score', { ascending: false });
     setSpillere(data || []);
+  };
+
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = 400; 
+        const scaleSize = MAX_WIDTH / img.width;
+        canvas.width = MAX_WIDTH;
+        canvas.height = img.height * scaleSize;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.7);
+        setFormData({ ...formData, spiller_billede: compressedDataUrl });
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const formaterTal = (num) => {
@@ -148,17 +180,15 @@ export default function HobroScoutingApp() {
     const { error } = redigeringsId 
       ? await supabase.from('spillere').update(dataTilGem).eq('id', redigeringsId)
       : await supabase.from('spillere').insert([dataTilGem]);
-    if (error) alert("Fejl ved gem: " + error.message);
-    else { 
+    
+    if (error) {
+      alert("Fejl ved gem: " + error.message);
+    } else { 
+      // OPRYDNING: Slet kladde ved succesfuld gemning
       localStorage.removeItem('hik_scout_kladde');
       setVisFormular(false); 
       hentSpillere(); 
     }
-  };
-
-  const gemKladde = () => {
-    localStorage.setItem('hik_scout_kladde', JSON.stringify(formData));
-    alert("Kladde gemt lokalt!");
   };
 
   const clean = (val) => (val === null || val === undefined || val === 'null' ? '' : val);
@@ -190,18 +220,28 @@ export default function HobroScoutingApp() {
       const imgData = await getBase64ImageFromURL(logoPdfUrl);
       doc.addImage(imgData, 'PNG', 15, 7, 20, 20);
     } catch (e) { console.error("Kunne ikke hente logo:", e); }
+    
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(20);
     doc.setFont("helvetica", "bold");
     doc.text("HOBRO IK SCOUTING RAPPORT", 45, 22);
+    
     doc.setFontSize(9);
     doc.text(`Dato: ${clean(s.dato)}`, 165, 15);
     doc.text(`Bedømt af: ${clean(s.bedoemt_af)}`, 165, 20);
+
+    if (s.spiller_billede) {
+        try {
+            doc.addImage(s.spiller_billede, 'JPEG', 160, 40, 35, 45);
+        } catch (e) { console.error("Kunne ikke indsætte spillerbillede:", e); }
+    }
+
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(18);
     doc.text(clean(s.navn).toUpperCase(), 15, 50);
     doc.setDrawColor(200, 200, 200);
-    doc.line(15, 53, 195, 53);
+    doc.line(15, 53, 150, 53); 
+
     doc.setFontSize(10);
     doc.setFont("helvetica", "normal");
     doc.text(`Klub: ${clean(s.klub)}`, 15, 62);
@@ -212,31 +252,53 @@ export default function HobroScoutingApp() {
     doc.text(`Type: ${clean(s.spillertype)}`, 85, 68);
     doc.text(`RVE: ${clean(s.rve)}`, 85, 74);
     doc.text(`Foretrukket ben: ${clean(s.ben)}`, 85, 80);
+
+    const boxX = 15;
+    const boxY = 85;
+    const boxWidth = 45;
+    const centerX = boxX + (boxWidth / 2); // Dette giver 37.5
+    
     doc.setFillColor(blue[0], blue[1], blue[2]);
-    doc.roundedRect(155, 58, 45, 25, 2, 2, 'F');
+    doc.roundedRect(boxX, boxY, boxWidth, 20, 2, 2, 'F');
+    
+    // Tekst i boks (hvid farve)
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text("SAMLET SCORE", 157, 68);
-    doc.setFontSize(16);
-    doc.text(formaterTal(s.samlet_score), 173, 78);
+    
+    doc.setFontSize(12);
+    doc.text("SAMLET SCORE", centerX, boxY + 8, { align: "center" });
+    
+    doc.setFontSize(15);
+    doc.text(formaterTal(s.samlet_score), centerX, boxY + 16, { align: "center" });
+
     doc.setTextColor(blue[0], blue[1], blue[2]);
-    doc.text("KARAKTER (1-6)", 15, 100);
-    const scores = [["Teknik", s.teknik], ["Taktisk", s.taktisk], ["Fysisk indsats", s.fysisk], ["Sammenhold og Indstilling", s.sammenhold], ["Speed og motorik", s.speed], ["Generel indsats ift. RVE", s.indsats_rve]];
+    doc.text("KARAKTER (1-6)", 15, 115);
+
+    // ÆNDRET: Opdaterede labels i PDF
+    const scores = [
+      ["Teknik", s.teknik],
+      ["Taktisk indsats", s.taktisk],
+      ["Fysisk indsats", s.fysisk],
+      ["Sammenhold/Indstilling", s.sammenhold],
+      ["Speed/Motorik", s.speed],
+      ["Generel indsats ift. RVE", s.indsats_rve]
+    ];
+    
     scores.forEach((item, index) => {
-      const y = 110 + (index * 8);
+      const y = 125 + (index * 8);
       doc.setTextColor(0,0,0);
       doc.setFont("helvetica", "normal");
       doc.setFontSize(9);
       doc.text(item[0], 15, y);
       doc.setFillColor(240, 240, 240);
-      doc.rect(70, y-4, 90, 5, 'F');
+      doc.rect(50, y-4, 100, 5, 'F');
       doc.setFillColor(yellow[0], yellow[1], yellow[2]);
-      doc.rect(70, y-4, (Number(item[1] || 0) / 6) * 90, 5, 'F');
+      doc.rect(50, y-4, (Number(item[1] || 0) / 6) * 100, 5, 'F');
       doc.setFont("helvetica", "bold");
-      doc.text(formaterTal(item[1]), 165, y);
+      doc.text(formaterTal(item[1]), 155, y);
     });
-    let currentY = 170;
+
+    let currentY = 180;
     [["PROS", s.pros], ["CONS", s.cons], ["UDVIKLINGSPOTENTIALE", s.udvikling]].forEach(sek => {
       doc.setFont("helvetica", "bold");
       doc.setTextColor(blue[0], blue[1], blue[2]);
@@ -247,14 +309,19 @@ export default function HobroScoutingApp() {
       doc.text(splitText, 15, currentY + 6);
       currentY += (splitText.length * 5) + 12;
     });
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(blue[0], blue[1], blue[2]);
-    doc.text("VIDEO LINK (URL)", 15, currentY);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(0, 0, 255);
-    const vUrl = clean(s.video_link);
-    doc.text(vUrl || '-', 15, currentY + 6);
-    if (vUrl && vUrl.startsWith('http')) doc.link(15, currentY + 2, 180, 10, { url: vUrl });
+
+    // TILFØJET: Video link under Udviklingspotentiale
+    if (clean(s.video_link)) {
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(blue[0], blue[1], blue[2]);
+      doc.text("VIDEO LINK", 15, currentY);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(0, 0, 0);
+      const splitVideo = doc.splitTextToSize(clean(s.video_link), 180);
+      doc.text(splitVideo, 15, currentY + 6);
+      currentY += (splitVideo.length * 5) + 12;
+    }
+
     doc.save(`Scouting_Rapport_${s.navn}.pdf`);
   };
 
@@ -319,11 +386,21 @@ export default function HobroScoutingApp() {
           </div>
           <div style={{display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '220px'}}>
             <div style={{display: 'flex', gap: '4px'}}>
+               {/* GENDANNELSES-TJEK HER */}
                <button onClick={() => {
                    const gemt = localStorage.getItem('hik_scout_kladde');
-                   if(gemt && confirm("Vil du gendanne din gemte kladde?")) setFormData(JSON.parse(gemt));
-                   else setFormData(initialFormData);
-                   setRedigeringsId(null); setVisFormular(true);
+                   if (gemt) {
+                       if (confirm("Der findes en ugemt kladde. Vil du fortsætte, hvor du slap?")) {
+                           setFormData(JSON.parse(gemt));
+                       } else {
+                           localStorage.removeItem('hik_scout_kladde');
+                           setFormData(initialFormData);
+                       }
+                   } else {
+                       setFormData(initialFormData);
+                   }
+                   setRedigeringsId(null); 
+                   setVisFormular(true);
                }} style={topBtnStyle('#fdef42')}>OPRET SPILLER</button>
                <button onClick={handleLogout} style={topBtnStyle('#ff4d4d', 'white')}>LOG UD</button>
             </div>
@@ -358,7 +435,19 @@ export default function HobroScoutingApp() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         {visFormular ? (
           <div style={{padding: '15px', maxWidth: '800px', margin: '0 auto', backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', marginTop: '10px'}}>
-            <h2 style={{fontWeight: 'bold', position: 'relative', zIndex: 2}}>Stamdata</h2>
+            <h2 style={{fontWeight: 'bold', position: 'relative', zIndex: 2}}>Stamdata & Billede</h2>
+            
+            <label style={labelStyle}>SPILLERBILLEDE</label>
+            <div style={{marginBottom: '15px', position: 'relative', zIndex: 2}}>
+                <input type="file" accept="image/*" onChange={handleImageUpload} style={{marginBottom: '10px', fontSize: '12px'}} />
+                {formData.spiller_billede && (
+                    <div style={{marginTop: '5px'}}>
+                        <img src={formData.spiller_billede} alt="Preview" style={{width: '80px', height: '100px', objectFit: 'cover', borderRadius: '4px', border: '2px solid #0056a4'}} />
+                        <button onClick={() => setFormData({...formData, spiller_billede: null})} style={{display: 'block', color: 'red', fontSize: '10px', background: 'none', border: 'none', padding: '2px', cursor: 'pointer'}}>Fjern billede</button>
+                    </div>
+                )}
+            </div>
+
             <label style={labelStyle}>DATO</label>
             <input type="date" style={inputStyle} value={formData.dato} onChange={e => setFormData({...formData, dato: e.target.value})} />
             <input type="text" placeholder="Navn" style={inputStyle} value={formData.navn} onChange={e => setFormData({...formData, navn: e.target.value})} />
@@ -372,17 +461,47 @@ export default function HobroScoutingApp() {
             <label style={labelStyle}>RVE</label>
             <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}><option value="1">1 (Lille)</option><option value="2">2 (Mellem)</option><option value="3">3 (Stor)</option></select>
             <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
+            
             <h2 style={{fontWeight: 'bold', marginTop: '30px', position: 'relative', zIndex: 2}}>Karakterer (1-6)</h2>
             {['teknik', 'taktisk', 'fysisk', 'sammenhold', 'speed', 'indsats_rve'].map(f => (
-              <div key={f}><label style={labelStyle}>{f === 'fysisk' ? 'FYSISK INDSATS' : f === 'sammenhold' ? 'SAMMENHOLD OG INDSTILLING' : f === 'speed' ? 'SPEED OG MOTORIK' : f === 'indsats_rve' ? 'GENEREL INDSATS IFT. RVE' : f.toUpperCase()}</label><select style={inputStyle} value={formData[f]} onChange={e => setFormData({...formData, [f]: e.target.value})}>{[1,2,3,4,5,6].map(n => <option key={n} value={n}>{n}</option>)}</select></div>
+              <div key={f}>
+                <label style={labelStyle}>{f === 'fysisk' ? 'FYSISK INDSATS' : f === 'sammenhold' ? 'SAMMENHOLD OG INDSTILLING' : f === 'speed' ? 'SPEED OG MOTORIK' : f === 'indsats_rve' ? 'GENEREL INDSATS IFT. RVE' : f.toUpperCase()}</label>
+                <div style={{ display: 'flex', gap: '8px', marginBottom: '15px', marginTop: '5px', position: 'relative', zIndex: 2 }}>
+                  {[1, 2, 3, 4, 5, 6].map(n => (
+                    <div
+                      key={n}
+                      onClick={() => setFormData({ ...formData, [f]: n })}
+                      style={{
+                        width: '38px',
+                        height: '38px',
+                        borderRadius: '50%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        border: '1px solid #0056a4',
+                        backgroundColor: Number(formData[f]) === n ? '#0056a4' : 'white',
+                        color: Number(formData[f]) === n ? 'white' : '#0056a4',
+                        fontWeight: 'bold',
+                        fontSize: '14px',
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      {n}
+                    </div>
+                  ))}
+                </div>
+              </div>
             ))}
+
             <h2 style={{fontWeight: 'bold', marginTop: '30px', position: 'relative', zIndex: 2}}>Notater & Medier</h2>
             <label style={labelStyle}>PROS</label><textarea style={areaStyle} value={formData.pros} onChange={e => setFormData({...formData, pros: e.target.value})} />
             <label style={labelStyle}>CONS</label><textarea style={areaStyle} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
             <label style={labelStyle}>UDVIKLINGSPOTENTIALE</label><textarea style={areaStyle} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
             <label style={labelStyle}>VIDEO LINK (URL)</label><input type="text" style={inputStyle} value={formData.video_link} onChange={e => setFormData({...formData, video_link: e.target.value})} />
+            
             <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer', position: 'relative', zIndex: 2}}>GEM RAPPORT</button>
-            <button onClick={gemKladde} style={{width: '100%', padding: '16px', backgroundColor: '#555', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '10px', cursor: 'pointer', position: 'relative', zIndex: 2}}>KLADDE</button>
+            
             <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', position: 'relative', zIndex: 2}}>Fortryd</button>
           </div>
         ) : (
