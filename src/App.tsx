@@ -45,9 +45,9 @@ export default function HobroScoutingApp() {
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
-    navn: '', klub: '', aargang: '2014', foedt: '', rve: '1', position: '', ben: 'Højre', bedoemt_af: '',
+    navn: '', klub: '', aargang: '', foedt: '', rve: '', position: '', ben: '', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
-    pros: '', cons: '', udvikling: '', spillertype: 'Spilfordeler', niveau: '', video_link: '',
+    pros: '', cons: '', udvikling: '', spillertype: '', niveau: '', video_link: '',
     spiller_billede: null 
   };
 
@@ -184,7 +184,6 @@ export default function HobroScoutingApp() {
     if (error) {
       alert("Fejl ved gem: " + error.message);
     } else { 
-      // OPRYDNING: Slet kladde ved succesfuld gemning
       localStorage.removeItem('hik_scout_kladde');
       setVisFormular(false); 
       hentSpillere(); 
@@ -256,12 +255,11 @@ export default function HobroScoutingApp() {
     const boxX = 15;
     const boxY = 85;
     const boxWidth = 45;
-    const centerX = boxX + (boxWidth / 2); // Dette giver 37.5
+    const centerX = boxX + (boxWidth / 2); 
     
     doc.setFillColor(blue[0], blue[1], blue[2]);
     doc.roundedRect(boxX, boxY, boxWidth, 20, 2, 2, 'F');
     
-    // Tekst i boks (hvid farve)
     doc.setTextColor(255, 255, 255);
     doc.setFont("helvetica", "bold");
     
@@ -274,7 +272,6 @@ export default function HobroScoutingApp() {
     doc.setTextColor(blue[0], blue[1], blue[2]);
     doc.text("KARAKTER (1-6)", 15, 115);
 
-    // ÆNDRET: Opdaterede labels i PDF
     const scores = [
       ["Teknik", s.teknik],
       ["Taktisk indsats", s.taktisk],
@@ -310,7 +307,6 @@ export default function HobroScoutingApp() {
       currentY += (splitText.length * 5) + 12;
     });
 
-    // TILFØJET: Video link under Udviklingspotentiale
     if (clean(s.video_link)) {
       doc.setFont("helvetica", "bold");
       doc.setTextColor(blue[0], blue[1], blue[2]);
@@ -386,7 +382,6 @@ export default function HobroScoutingApp() {
           </div>
           <div style={{display: 'flex', flexDirection: 'column', gap: '4px', minWidth: '220px'}}>
             <div style={{display: 'flex', gap: '4px'}}>
-               {/* GENDANNELSES-TJEK HER */}
                <button onClick={() => {
                    const gemt = localStorage.getItem('hik_scout_kladde');
                    if (gemt) {
@@ -454,12 +449,35 @@ export default function HobroScoutingApp() {
             <input type="text" placeholder="Klub" style={inputStyle} value={formData.klub} onChange={e => setFormData({...formData, klub: e.target.value})} />
             <input type="text" placeholder="Niveau" style={inputStyle} value={formData.niveau} onChange={e => setFormData({...formData, niveau: e.target.value})} />
             <input type="text" placeholder="Født (DD-MM-ÅÅ)" style={inputStyle} value={formData.foedt} onChange={e => setFormData({...formData, foedt: e.target.value})} />
-            <div style={{display: 'flex', gap: '10px', position: 'relative', zIndex: 2}}><div style={{flex: 1}}><label style={labelStyle}>ÅRGANG</label><select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>{alleAargange.map(aar => <option key={aar} value={aar}>{aar}</option>)}</select></div><div style={{flex: 1}}><label style={labelStyle}>BEN</label><select style={inputStyle} value={formData.ben} onChange={e => setFormData({...formData, ben: e.target.value})}>{['Højre', 'Venstre', 'Begge'].map(b => <option key={b} value={b}>{b}</option>)}</select></div></div>
+            <div style={{display: 'flex', gap: '10px', position: 'relative', zIndex: 2}}>
+                <div style={{flex: 1}}>
+                    <label style={labelStyle}>ÅRGANG</label>
+                    <select style={inputStyle} value={formData.aargang} onChange={e => setFormData({...formData, aargang: e.target.value})}>
+                        <option value="">- Vælg -</option>
+                        {alleAargange.map(aar => <option key={aar} value={aar}>{aar}</option>)}
+                    </select>
+                </div>
+                <div style={{flex: 1}}>
+                    <label style={labelStyle}>BEN</label>
+                    <select style={inputStyle} value={formData.ben} onChange={e => setFormData({...formData, ben: e.target.value})}>
+                        <option value="">- Vælg -</option>
+                        {['Højre ben', 'Venstre ben', 'Begge ben'].map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                </div>
+            </div>
             <label style={labelStyle}>SPILLERTYPE</label>
-            <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>{['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}</select>
+            <select style={inputStyle} value={formData.spillertype} onChange={e => setFormData({...formData, spillertype: e.target.value})}>
+                <option value="">- Vælg -</option>
+                {['Den høje', 'Spilfordeler', 'Den hurtige', 'Afslutteren', 'Den udfordrende', 'Den aggressive'].map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
             <input type="text" placeholder="Position" style={inputStyle} value={formData.position} onChange={e => setFormData({...formData, position: e.target.value})} />
             <label style={labelStyle}>RVE</label>
-            <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}><option value="1">1 (Lille)</option><option value="2">2 (Mellem)</option><option value="3">3 (Stor)</option></select>
+            <select style={inputStyle} value={formData.rve} onChange={e => setFormData({...formData, rve: e.target.value})}>
+                <option value="">- Vælg -</option>
+                <option value="1">1 (Lille)</option>
+                <option value="2">2 (Mellem)</option>
+                <option value="3">3 (Stor)</option>
+            </select>
             <input type="text" placeholder="Bedømt af" style={inputStyle} value={formData.bedoemt_af} onChange={e => setFormData({...formData, bedoemt_af: e.target.value})} />
             
             <h2 style={{fontWeight: 'bold', marginTop: '30px', position: 'relative', zIndex: 2}}>Karakterer (1-6)</h2>
@@ -472,19 +490,10 @@ export default function HobroScoutingApp() {
                       key={n}
                       onClick={() => setFormData({ ...formData, [f]: n })}
                       style={{
-                        width: '38px',
-                        height: '38px',
-                        borderRadius: '50%',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        cursor: 'pointer',
-                        border: '1px solid #0056a4',
+                        width: '38px', height: '38px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', border: '1px solid #0056a4',
                         backgroundColor: Number(formData[f]) === n ? '#0056a4' : 'white',
                         color: Number(formData[f]) === n ? 'white' : '#0056a4',
-                        fontWeight: 'bold',
-                        fontSize: '14px',
-                        transition: 'all 0.2s ease'
+                        fontWeight: 'bold', fontSize: '14px', transition: 'all 0.2s ease'
                       }}
                     >
                       {n}
@@ -501,7 +510,6 @@ export default function HobroScoutingApp() {
             <label style={labelStyle}>VIDEO LINK (URL)</label><input type="text" style={inputStyle} value={formData.video_link} onChange={e => setFormData({...formData, video_link: e.target.value})} />
             
             <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer', position: 'relative', zIndex: 2}}>GEM RAPPORT</button>
-            
             <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', position: 'relative', zIndex: 2}}>Fortryd</button>
           </div>
         ) : (
@@ -534,11 +542,11 @@ export default function HobroScoutingApp() {
                   }}>
                     <div>
                       <div style={{fontWeight: 'bold', fontSize: '0.85rem', color: '#333', lineHeight: '1.2'}}>{s.navn}</div>
-                      <div style={{fontSize: '0.65rem', color: '#888'}}>{s.aargang} • {s.dato}</div>
+                      <div style={{fontSize: '0.65rem', color: '#888'}}>{s.aargang} • {s.foedt}</div>
                     </div>
                     <div>
                       <div style={{fontWeight: 'bold', fontSize: '0.8rem', color: '#0056a4', lineHeight: '1.2'}}>{s.klub}</div>
-                      <div style={{fontSize: '0.6rem', color: '#666'}}>{s.spillertype}</div>
+                      <div style={{fontSize: '0.6rem', color: '#666'}}>{s.ben}</div>
                     </div>
                     <div style={{backgroundColor: scoreStyle.bgColor, color: scoreStyle.textColor, width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', justifySelf: 'center'}}>
                         {formaterTal(s.samlet_score)}
