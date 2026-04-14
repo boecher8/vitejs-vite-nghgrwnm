@@ -42,13 +42,20 @@ export default function HobroScoutingApp() {
   const [valgtKlub, setValgtKlub] = useState('Alle');
   const [valgteScores, setValgteScores] = useState([]); 
   const [searchQuery, setSearchQuery] = useState('');
+
+  // NYT: State til versionshåndtering
+  const [aktivVersion, setAktivVersion] = useState(1);
+  const [spillerVersioner, setSpillerVersioner] = useState([]);
+  const [gemmerVersion, setGemmerVersion] = useState(false);
   
   const initialFormData = {
     dato: new Date().toISOString().split('T')[0],
     navn: '', klub: '', aargang: '', foedt: '', rve: '', position: '', ben: '', bedoemt_af: '',
     teknik: 1, taktisk: 1, fysisk: 1, sammenhold: 1, speed: 1, indsats_rve: 1,
     pros: '', cons: '', udvikling: '', spillertype: '', niveau: '', video_link: '',
-    spiller_billede: null 
+    spiller_billede: null,
+    version: 1,  // NYT: version felt i initialFormData
+    status: null  // NYT: status felt – null / 'skal_følges' / 'scouting_afsluttet'
   };
 
   const [formData, setFormData] = useState(initialFormData);
@@ -97,6 +104,100 @@ export default function HobroScoutingApp() {
     setSpillere(data || []);
   };
 
+  // NYT: Gruppér spillere på navn – vis kun nyeste version per spiller på forsiden
+  const getGruppereteSpillere = (filtrerede) => {
+    const grouped = {};
+    filtrerede.forEach(s => {
+      const key = s.navn.toLowerCase().trim();
+      if (!grouped[key]) {
+        grouped[key] = s;
+      } else {
+        const eksisterendeVersion = grouped[key].version || 1;
+        const nyVersion = s.version || 1;
+        if (nyVersion > eksisterendeVersion) {
+          grouped[key] = s;
+        }
+      }
+    });
+    return Object.values(grouped);
+  };
+
+  // NYT: Hent alle versioner for en spiller ved navn – RETTET: .eq matcher eksakt navn
+  const hentVersionerForSpiller = async (navn) => {
+    const { data } = await supabase
+      .from('spillere')
+      .select('*')
+      .eq('navn', navn.trim())
+      .order('version', { ascending: true });
+    return data || [];
+  };
+
+  // NYT: Åbn spiller – hent alle versioner og åbn nyeste
+  const aabneSpiller = async (s) => {
+    const versioner = await hentVersionerForSpiller(s.navn);
+    setSpillerVersioner(versioner);
+    const nyeste = versioner.reduce((prev, curr) => 
+      (curr.version || 1) > (prev.version || 1) ? curr : prev, versioner[0]);
+    setFormData(nyeste);
+    setRedigeringsId(nyeste.id);
+    setAktivVersion(nyeste.version || 1);
+    setVisFormular(true);
+  };
+
+  // NYT: Skift til en specifik version
+  const skiftVersion = (v) => {
+    const fundet = spillerVersioner.find(s => (s.version || 1) === v);
+    if (fundet) {
+      setFormData(fundet);
+      setRedigeringsId(fundet.id);
+      setAktivVersion(v);
+    }
+  };
+
+  // NYT: Gem som ny version (V1–V5)
+  const gemSomNyVersion = async () => {
+    const eksisterendeVersioner = spillerVersioner.map(s => s.version || 1);
+    const maxVersion = Math.max(...eksisterendeVersioner, 0);
+    if (maxVersion >= 5) {
+      alert("Maksimalt 5 versioner per spiller er nået. Slet en ældre version for at oprette ny.");
+      return;
+    }
+    const nyVersionNummer = maxVersion + 1;
+    setGemmerVersion(true);
+    const samletScore = beregnScore();
+    const rveTal = String(formData.rve).charAt(0);
+    const { id: _fjernId, ...formUdenId } = formData;
+    const dataTilGem = {
+      ...formUdenId,
+      version: nyVersionNummer,
+      dato: new Date().toISOString().split('T')[0],
+      samlet_score: parseFloat(samletScore.replace(',', '.')),
+      rve: parseInt(rveTal),
+      teknik: parseInt(formData.teknik),
+      taktisk: parseInt(formData.taktisk),
+      fysisk: parseInt(formData.fysisk),
+      sammenhold: parseInt(formData.sammenhold),
+      speed: parseInt(formData.speed),
+      indsats_rve: parseInt(formData.indsats_rve)
+    };
+    if (!dataTilGem.video_link || dataTilGem.video_link.trim() === '') delete dataTilGem.video_link;
+    const { error } = await supabase.from('spillere').insert([dataTilGem]);
+    if (error) {
+      alert("Fejl ved gem af ny version: " + error.message);
+    } else {
+      const opdatereteVersioner = await hentVersionerForSpiller(formData.navn);
+      setSpillerVersioner(opdatereteVersioner);
+      const nyRække = opdatereteVersioner.find(s => (s.version || 1) === nyVersionNummer);
+      if (nyRække) {
+        setFormData(nyRække);
+        setRedigeringsId(nyRække.id);
+        setAktivVersion(nyVersionNummer);
+      }
+      await hentSpillere();
+    }
+    setGemmerVersion(false);
+  };
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -133,6 +234,19 @@ export default function HobroScoutingApp() {
     if (s >= 3.49) return { bgColor: '#ccff90', textColor: 'black', label: 'Lysegrøn', min: 3.5 };
     if (s >= 3.00) return { bgColor: '#ffa726', textColor: 'black', label: 'Orange', min: 3.0 };
     return { bgColor: '#ef5350', textColor: 'white', label: 'Rød', min: 0 };
+  };
+
+  // NYT: Status badge style – SF (rød) og SA (blå)
+  const getStatusBadge = (status) => {
+    if (status === 'skal_følges') return { tekst: 'SF', bgColor: '#e53935', textColor: 'black' };
+    if (status === 'scouting_afsluttet') return { tekst: 'SA', bgColor: '#0056a4', textColor: 'white' };
+    return null;
+  };
+
+  // NYT: Skift status i formData lokalt – gemmes ved GEM RAPPORT
+  const skiftStatus = (nyStatus) => {
+    const statusVærdi = formData.status === nyStatus ? null : nyStatus;
+    setFormData({ ...formData, status: statusVærdi });
   };
 
   const toggleScoreFilter = (label) => {
@@ -174,7 +288,8 @@ export default function HobroScoutingApp() {
       fysisk: parseInt(formData.fysisk),
       sammenhold: parseInt(formData.sammenhold),
       speed: parseInt(formData.speed),
-      indsats_rve: parseInt(formData.indsats_rve)
+      indsats_rve: parseInt(formData.indsats_rve),
+      version: aktivVersion || 1  // NYT: bevar versionsnummer ved gem
     };
     if (!formData.video_link || formData.video_link.trim() === '') delete dataTilGem.video_link;
     const { error } = redigeringsId 
@@ -185,7 +300,10 @@ export default function HobroScoutingApp() {
       alert("Fejl ved gem: " + error.message);
     } else { 
       localStorage.removeItem('hik_scout_kladde');
-      setVisFormular(false); 
+      setVisFormular(false);
+      // NYT: Nulstil version-state ved luk
+      setSpillerVersioner([]);
+      setAktivVersion(1);
       hentSpillere(); 
     }
   };
@@ -228,6 +346,10 @@ export default function HobroScoutingApp() {
     doc.setFontSize(9);
     doc.text(`Dato: ${clean(s.dato)}`, 165, 15);
     doc.text(`Bedømt af: ${clean(s.bedoemt_af)}`, 165, 20);
+    // NYT: Vis version i PDF
+    if (s.version && s.version > 0) {
+      doc.text(`Version: V${s.version}`, 165, 25);
+    }
 
     if (s.spiller_billede) {
         try {
@@ -318,7 +440,9 @@ export default function HobroScoutingApp() {
       currentY += (splitVideo.length * 5) + 12;
     }
 
-    doc.save(`Scouting_Rapport_${s.navn}.pdf`);
+    // NYT: Filnavn inkluderer versionsnummer
+    const versionSuffix = s.version ? `_V${s.version}` : '';
+    doc.save(`Scouting_Rapport_${s.navn}${versionSuffix}.pdf`);
   };
 
   const eksporterTilCSV = () => {
@@ -359,6 +483,20 @@ export default function HobroScoutingApp() {
   const areaStyle = { ...inputStyle, minHeight: '100px' };
   const labelStyle = { display: 'block', fontWeight: 'bold', fontSize: '13px', color: '#444', marginBottom: '4px', marginTop: '10px', position: 'relative', zIndex: 2 };
 
+  // NYT: Style til version-knapper
+  const versionBtnStyle = (aktiv) => ({
+    padding: '6px 14px',
+    borderRadius: '20px',
+    border: aktiv ? 'none' : '1px solid #0056a4',
+    backgroundColor: aktiv ? '#0056a4' : 'white',
+    color: aktiv ? 'white' : '#0056a4',
+    fontWeight: 'bold',
+    fontSize: '12px',
+    cursor: 'pointer',
+    boxShadow: aktiv ? '0 2px 6px rgba(0,86,164,0.3)' : '0 1px 2px rgba(0,0,0,0.1)',
+    transition: 'all 0.15s ease'
+  });
+
   if (!user) {
     return (
       <div style={{backgroundColor: '#0056a4', minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '20px'}}>
@@ -394,7 +532,10 @@ export default function HobroScoutingApp() {
                    } else {
                        setFormData(initialFormData);
                    }
-                   setRedigeringsId(null); 
+                   setRedigeringsId(null);
+                   // NYT: Nulstil version-state ved ny spiller
+                   setSpillerVersioner([]);
+                   setAktivVersion(1);
                    setVisFormular(true);
                }} style={topBtnStyle('#fdef42')}>OPRET SPILLER</button>
                <button onClick={handleLogout} style={topBtnStyle('#ff4d4d', 'white')}>LOG UD</button>
@@ -430,6 +571,38 @@ export default function HobroScoutingApp() {
       <div style={{ position: 'relative', zIndex: 1 }}>
         {visFormular ? (
           <div style={{padding: '15px', maxWidth: '800px', margin: '0 auto', backgroundColor: 'rgba(255, 255, 255, 0.9)', borderRadius: '8px', marginTop: '10px'}}>
+            
+            {/* NYT: Versionsbånd – vises kun hvis der er flere versioner */}
+            {spillerVersioner.length > 1 && (
+              <div style={{
+                backgroundColor: '#f0f4ff',
+                border: '1px solid #d0ddf7',
+                borderRadius: '8px',
+                padding: '10px 14px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                flexWrap: 'wrap',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <span style={{fontSize: '11px', fontWeight: 'bold', color: '#0056a4', whiteSpace: 'nowrap'}}>VERSIONER:</span>
+                {spillerVersioner.map(v => (
+                  <button
+                    key={v.id}
+                    onClick={() => skiftVersion(v.version || 1)}
+                    style={versionBtnStyle(aktivVersion === (v.version || 1))}
+                  >
+                    V{v.version || 1}
+                    <span style={{fontSize: '9px', fontWeight: 'normal', marginLeft: '4px', opacity: 0.8}}>
+                      {v.dato ? v.dato.slice(0, 7) : ''}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
+
             <h2 style={{fontWeight: 'bold', position: 'relative', zIndex: 2}}>Stamdata & Billede</h2>
             
             <label style={labelStyle}>SPILLERBILLEDE</label>
@@ -508,9 +681,83 @@ export default function HobroScoutingApp() {
             <label style={labelStyle}>CONS</label><textarea style={areaStyle} value={formData.cons} onChange={e => setFormData({...formData, cons: e.target.value})} />
             <label style={labelStyle}>UDVIKLINGSPOTENTIALE</label><textarea style={areaStyle} value={formData.udvikling} onChange={e => setFormData({...formData, udvikling: e.target.value})} />
             <label style={labelStyle}>VIDEO LINK (URL)</label><input type="text" style={inputStyle} value={formData.video_link} onChange={e => setFormData({...formData, video_link: e.target.value})} />
+
+            {/* NYT: STATUS KNAPPER – Skal følges / Scouting afsluttet */}
+            <h2 style={{fontWeight: 'bold', marginTop: '30px', position: 'relative', zIndex: 2}}>Status</h2>
+            <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap', position: 'relative', zIndex: 2}}>
+              <button
+                onClick={() => skiftStatus('skal_følges')}
+                style={{
+                  flex: 1, minWidth: '140px', padding: '12px',
+                  backgroundColor: formData.status === 'skal_følges' ? '#e53935' : 'white',
+                  color: formData.status === 'skal_følges' ? 'black' : '#333',
+                  border: formData.status === 'skal_følges' ? 'none' : '2px solid #e53935',
+                  borderRadius: '8px', fontWeight: 'bold', fontSize: '13px',
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                {formData.status === 'skal_følges' ? '✓ ' : ''}SF – Skal følges
+              </button>
+              <button
+                onClick={() => skiftStatus('scouting_afsluttet')}
+                style={{
+                  flex: 1, minWidth: '140px', padding: '12px',
+                  backgroundColor: formData.status === 'scouting_afsluttet' ? '#0056a4' : 'white',
+                  color: formData.status === 'scouting_afsluttet' ? 'black' : '#333',
+                  border: formData.status === 'scouting_afsluttet' ? 'none' : '2px solid #0056a4',
+                  borderRadius: '8px', fontWeight: 'bold', fontSize: '13px',
+                  cursor: 'pointer', transition: 'all 0.15s ease'
+                }}
+              >
+                {formData.status === 'scouting_afsluttet' ? '✓ ' : ''}SA – Scouting afsluttet
+              </button>
+            </div>
             
-            <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '20px', cursor: 'pointer', position: 'relative', zIndex: 2}}>GEM RAPPORT</button>
-            <button onClick={() => setVisFormular(false)} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', position: 'relative', zIndex: 2}}>Fortryd</button>
+            {/* NYT: GEM SOM NY VERSION knap – vises altid når man redigerer eksisterende spiller */}
+            {redigeringsId && (
+              <div style={{
+                margin: '20px 0 0 0',
+                padding: '14px',
+                backgroundColor: '#f0f4ff',
+                border: '1px solid #d0ddf7',
+                borderRadius: '8px',
+                position: 'relative',
+                zIndex: 2
+              }}>
+                <div style={{fontSize: '12px', color: '#0056a4', fontWeight: 'bold', marginBottom: '8px'}}>
+                  GEM SOM NY VERSION
+                </div>
+                <div style={{fontSize: '11px', color: '#666', marginBottom: '10px'}}>
+                  Gemmer en ny version ({spillerVersioner.length > 0 ? `V${Math.min(Math.max(...spillerVersioner.map(v => v.version || 1)) + 1, 5)}` : 'V2'}) og bevarer den nuværende rapport uændret. Maks. 5 versioner.
+                </div>
+                <button
+                  onClick={gemSomNyVersion}
+                  disabled={gemmerVersion || spillerVersioner.length >= 5}
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: spillerVersioner.length >= 5 ? '#ccc' : '#0056a4',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: spillerVersioner.length >= 5 ? 'not-allowed' : 'pointer',
+                    fontSize: '13px',
+                    opacity: gemmerVersion ? 0.7 : 1
+                  }}
+                >
+                  {gemmerVersion ? 'GEMMER...' : spillerVersioner.length >= 5 ? 'MAKS. VERSIONER NÅET (5/5)' : `➕ GEM SOM NY VERSION`}
+                </button>
+              </div>
+            )}
+
+            <button onClick={gemSpiller} style={{width: '100%', padding: '16px', backgroundColor: '#0056a4', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', marginTop: '12px', cursor: 'pointer', position: 'relative', zIndex: 2}}>GEM RAPPORT</button>
+            <button onClick={() => {
+              setVisFormular(false);
+              // NYT: Nulstil version-state ved luk
+              setSpillerVersioner([]);
+              setAktivVersion(1);
+            }} style={{width: '100%', padding: '12px', color: 'red', background: 'none', border: 'none', cursor: 'pointer', position: 'relative', zIndex: 2}}>Fortryd</button>
           </div>
         ) : (
           <div style={{padding: '6px'}}>
@@ -532,22 +779,60 @@ export default function HobroScoutingApp() {
               <button onClick={() => toggleScoreFilter('Orange')} style={btnStyle(valgteScores.includes('Orange'), '#ffa726')}>&gt;3,0</button>
               <button onClick={() => toggleScoreFilter('Rød')} style={btnStyle(valgteScores.includes('Rød'), '#ef5350')}>&lt;3,0</button>
             </div>
-            {getFiltreredeSpillere().map(s => {
+
+            {/* NYT: Forsiden bruger getGruppereteSpillere – ét kort per spiller */}
+            {getGruppereteSpillere(getFiltreredeSpillere()).map(s => {
                 const scoreStyle = getScoreStyle(s.samlet_score);
+                // NYT: Find antal versioner for denne spiller til badge
+                const antalVersioner = spillere.filter(sp => sp.navn.toLowerCase().trim() === s.navn.toLowerCase().trim()).length;
                 return (
-                  <div key={s.id} onClick={() => {setFormData(s); setRedigeringsId(s.id); setVisFormular(true);}} style={{
+                  <div key={s.id} onClick={() => aabneSpiller(s)} style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.9)', padding: '4px 8px', borderRadius: '8px', marginBottom: '4px', 
-                    display: 'grid', gridTemplateColumns: '2fr 1.5fr 0.8fr auto', alignItems: 'center', gap: '8px',
+                    display: 'grid', gridTemplateColumns: '2fr 1.5fr auto auto auto', alignItems: 'center', gap: '6px',
                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)', cursor: 'pointer', border: '1px solid #eee'
                   }}>
                     <div>
-                      <div style={{fontWeight: 'bold', fontSize: '0.85rem', color: '#333', lineHeight: '1.2'}}>{s.navn}</div>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '6px'}}>
+                        <div style={{fontWeight: 'bold', fontSize: '0.85rem', color: '#333', lineHeight: '1.2'}}>{s.navn}</div>
+                        {/* NYT: Versionsbadge – vises kun hvis der er mere end 1 version */}
+                        {antalVersioner > 1 && (
+                          <span style={{
+                            backgroundColor: '#e8f0fe',
+                            color: '#0056a4',
+                            fontSize: '9px',
+                            fontWeight: 'bold',
+                            padding: '1px 5px',
+                            borderRadius: '10px',
+                            border: '1px solid #c5d3f5',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            V{s.version || 1} / {antalVersioner}
+                          </span>
+                        )}
+                      </div>
                       <div style={{fontSize: '0.65rem', color: '#888'}}>{s.aargang} • {s.foedt}</div>
                     </div>
                     <div>
                       <div style={{fontWeight: 'bold', fontSize: '0.8rem', color: '#0056a4', lineHeight: '1.2'}}>{s.klub}</div>
                       <div style={{fontSize: '0.6rem', color: '#666'}}>{s.ben}</div>
                     </div>
+                    {/* NYT: SF/SA badge – samme størrelse og symmetri som scorefeltet */}
+                    {(() => {
+                      const badge = getStatusBadge(s.status);
+                      return badge ? (
+                        <div style={{
+                          backgroundColor: badge.bgColor,
+                          color: badge.textColor,
+                          width: '30px', height: '30px',
+                          borderRadius: '6px',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 'bold', fontSize: '0.75rem',
+                          justifySelf: 'center', flexShrink: 0
+                        }}>
+                          {badge.tekst}
+                        </div>
+                      ) : <div style={{width: '30px'}} />;
+                    })()}
                     <div style={{backgroundColor: scoreStyle.bgColor, color: scoreStyle.textColor, width: '30px', height: '30px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.9rem', justifySelf: 'center'}}>
                         {formaterTal(s.samlet_score)}
                     </div>
